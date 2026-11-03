@@ -2,3 +2,4 @@
 node_modules/
 # Persönliche Profile (hochladbar im Panel, nicht versioniert)
 Profile/
+dist/
