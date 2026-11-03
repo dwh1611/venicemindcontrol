@@ -1,0 +1,154 @@
+{
+  "id": "commands",
+  "name": "Slash Commands",
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Commands",
+  "defaultTime": "12:00",
+  "clock": false,
+  "prefixes": {
+    "actor": "USER",
+    "world": "SCENE"
+  },
+  "settingsLabels": {
+    "actor": "Prefix user (unused)",
+    "world": "Prefix scene (unused)"
+  },
+  "theme": {
+    "fg": "#7fb4ff",
+    "dim": "#4a7fc4",
+    "mut": "#6a809e",
+    "line": "#1b3555",
+    "bg": "#05080d",
+    "bg2": "#0a121d",
+    "deep": "#010502",
+    "ink": "#04101f",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#cfe0ff",
+    "glow": "108,170,255"
+  },
+  "header": {
+    "logo": "/ C M D",
+    "meta": [
+      [
+        "MIND ",
+        "Slash-command mind · ● LIVE · SID {sid}"
+      ]
+    ],
+    "prompt": "user@mind:~#"
+  },
+  "tabs": [
+    {
+      "id": "story",
+      "label": "STORY",
+      "blocks": [
+        {
+          "type": "hint",
+          "text": "/action = only the action. /scene = accept the situation and continue. /set = fix a fact."
+        },
+        {
+          "type": "field",
+          "id": "text",
+          "label": "Text",
+          "kind": "textarea",
+          "placeholder": "What happens?",
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": "COMMAND",
+          "items": [
+            {
+              "label": "/action",
+              "cmd": "/action"
+            },
+            {
+              "label": "/scene",
+              "cmd": "/scene"
+            },
+            {
+              "label": "/set",
+              "cmd": "/set"
+            }
+          ],
+          "action": {
+            "format": "raw",
+            "parts": [
+              "{item.cmd}"
+            ],
+            "body": [
+              "{field.text}"
+            ],
+            "requires": [
+              {
+                "need": "field.text",
+                "msg": "Text is missing."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "direct",
+      "label": "DIRECTOR",
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "TONE (/tone)",
+          "items": [
+            "playful",
+            "tense",
+            "warm",
+            "serious"
+          ],
+          "action": {
+            "format": "raw",
+            "parts": [
+              "/tone"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": "PACE (/pace)",
+          "items": [
+            "slower",
+            "faster"
+          ],
+          "action": {
+            "format": "raw",
+            "parts": [
+              "/pace"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": "HELP",
+          "items": [
+            {
+              "label": "/help",
+              "cmd": "/help"
+            }
+          ],
+          "action": {
+            "format": "raw",
+            "parts": [
+              "{item.cmd}"
+            ],
+            "body": []
+          }
+        }
+      ]
+    }
+  ]
+}

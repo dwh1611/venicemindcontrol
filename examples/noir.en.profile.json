@@ -1,0 +1,256 @@
+{
+  "id": "noir",
+  "name": "Noir",
+  "mindIds": [
+    "HIER-DIE-MIND-ID"
+  ],
+  "titleMatch": "Noir",
+  "defaultTime": "23:10",
+  "prefixes": {
+    "actor": "DETECTIVE",
+    "world": "CITY"
+  },
+  "settingsLabels": {
+    "actor": "Prefix detective",
+    "world": "Prefix city"
+  },
+  "theme": {
+    "fg": "#e8b04a",
+    "dim": "#a87b2a",
+    "mut": "#8a7a5a",
+    "line": "#4a3a1a",
+    "bg": "#0b0905",
+    "bg2": "#141008",
+    "deep": "#070502",
+    "ink": "#1a1204",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#f1ddb2",
+    "glow": "232,176,74"
+  },
+  "header": {
+    "logo": "N O I R",
+    "meta": [
+      [
+        "CASE ",
+        "No. 417 · ● OPEN · SID {sid}"
+      ]
+    ],
+    "prompt": "det@precinct:~#"
+  },
+  "eventKinds": {
+    "ASK": "#e8b04a",
+    "WATCH": "#ffb000",
+    "RADIO": "#6cc8ff",
+    "TIP": "#5fe0c4"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "cash",
+        "regex": "(\\d{1,5})\\s*\\$",
+        "icon": "💵",
+        "unit": " $"
+      }
+    ],
+    "meters": [
+      {
+        "key": "heat",
+        "label": "HEAT",
+        "regex": "Heat\\s*(\\d)\\s*\\/\\s*(\\d)",
+        "max": 4
+      }
+    ]
+  },
+  "statusRight": "💵 {cash|—} $",
+  "tabs": [
+    {
+      "id": "ask",
+      "label": "QUESTIONS",
+      "blocks": [
+        {
+          "type": "hint",
+          "text": "Who or what do you question?"
+        },
+        {
+          "type": "field",
+          "id": "target",
+          "label": "Person / place",
+          "placeholder": "Bartender, warehouse 9 …",
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": "QUESTION",
+          "items": [
+            "Where were you last night?",
+            "Do you know this man?",
+            "Who pays you?"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "ASK"
+            ],
+            "body": [
+              "{item}",
+              "→ {field.target}"
+            ],
+            "requires": [
+              {
+                "need": "field.target",
+                "msg": "Whom do you question?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "radio",
+      "label": "RADIO",
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": "Kind",
+          "whoLabel": "From",
+          "textLabel": "Text",
+          "kinds": {
+            "RADIO": {
+              "who": "Dispatch",
+              "text": "What comes over the radio?",
+              "quick": [
+                "Suspect sighted.",
+                "Backup is on the way."
+              ]
+            },
+            "TIP": {
+              "who": "Informant",
+              "text": "What does he whisper?",
+              "quick": [
+                "Warehouse on the pier."
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": "Text is missing."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wait",
+      "label": "WAIT",
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "TIME PASSES",
+          "items": [
+            {
+              "label": "10 min",
+              "m": 10
+            },
+            {
+              "label": "1 h",
+              "m": 60
+            },
+            {
+              "label": "until 06:00",
+              "until": "06:00"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "WATCH"
+            ],
+            "body": [
+              "{item.label}",
+              "({until_minutes} min)"
+            ],
+            "shift": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "scenario",
+      "label": "CASES",
+      "blocks": [
+        {
+          "type": "scenarios"
+        }
+      ]
+    }
+  ],
+  "scenarios": {
+    "items": [
+      {
+        "title": "Der Pier",
+        "city": "Hafen",
+        "time": "23:10",
+        "place": "A foggy pier, warehouse 9 ahead",
+        "mission": "Find out who is unloading crates"
+      }
+    ],
+    "fields": [
+      {
+        "key": "title",
+        "label": "Title",
+        "ph": "The Pier",
+        "required": true
+      },
+      {
+        "key": "time",
+        "label": "Time",
+        "ph": "23:10"
+      },
+      {
+        "key": "place",
+        "label": "Place",
+        "ph": "A foggy pier",
+        "area": true,
+        "required": true
+      },
+      {
+        "key": "mission",
+        "label": "Mission",
+        "ph": "Find out who is unloading crates",
+        "area": true
+      }
+    ],
+    "twist": false,
+    "template": {
+      "segments": [
+        "Place: {place}.",
+        "Mission: {mission}"
+      ],
+      "complication": {
+        "choose": "Complication: your choice, keep it hidden.",
+        "none": "Complication: none.",
+        "spoiler": "Complication: {twist}"
+      },
+      "closing": "Open with the detective already on the scene."
+    }
+  },
+  "convention": "Lines in square brackets starting with \"{hp}\" are the detective's actions: ASK = a question put to a person, WATCH = time passes while the detective watches. Lines starting with \"{wp}\" are events that do not come from the detective: RADIO = a radio message, TIP = an informant's whisper. The time in each line is the current in-world time and never runs backwards. Free text below the lines is the detective speaking or acting. End every reply with one status line in this exact form: ⏱ HH:MM · 📍 location · 150 $ · Heat 2/4"
+}
