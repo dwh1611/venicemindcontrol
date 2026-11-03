@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Mind Console",
+  "version": "1.0.0",
+  "description": "Side Panel für Venice-Minds: erkennt das Mind und zeigt dessen Konsole (Nightingale, Ghostline, weitere per Profil).",
+  "permissions": ["sidePanel", "storage", "tabs", "scripting"],
+  "host_permissions": ["https://venice.ai/*", "https://*.venice.ai/*"],
+  "background": { "service_worker": "background.js" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Mind Console öffnen" },
+  "content_scripts": [
+    {
+      "matches": ["https://venice.ai/*", "https://*.venice.ai/*"],
+      "js": ["profiles/registry.js", "profiles/nightingale.js", "profiles/ghostline.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

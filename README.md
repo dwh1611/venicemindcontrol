@@ -1,0 +1,173 @@
+# Mind Console
+
+Eine Chrome-Erweiterung, die neben einem Venice-Mind-Chat ein **Bedienpanel** einblendet. Ein Klick auf einen Button
+fügt eine fertig formatierte Zeile in die Chatbox ein, zum Beispiel `[NIGHTINGALE · 21:40 · QUERY · AEGIS] Karl Weiss`.
+Das Mind liest diese Zeilen als Spielzüge, das Panel liest die Statuszeile der Antwort zurück und zeigt sie als HUD.
+
+Die Erweiterung erkennt das Mind im aktiven Tab selbst und lädt dessen **Profil**. Profile sind reine Daten (JSON), eigene
+Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingale* (Agentin und Operator) und *Ghostline* (Hacker).
+
+> Stand: v1.0.0. Getestet mit einem Headless-Electron und nachgebautem `chrome`-Objekt, nicht in einem echten Chrome gegen die
+> echte Venice-Seite. Siehe [Tests und Grenzen](#tests-und-grenzen).
+
+## Inhalt
+- [Funktionen](#funktionen)
+- [Installation](#installation)
+- [Bedienung](#bedienung)
+- [Mind-Erkennung](#mind-erkennung)
+- [Eingebaute Profile](#eingebaute-profile)
+- [Eigene Profile](#eigene-profile)
+- [Chat-Darstellung](#chat-darstellung)
+- [Aufbau und Datenfluss](#aufbau-und-datenfluss)
+- [Sicherheit und Datenschutz](#sicherheit-und-datenschutz)
+- [Tests und Grenzen](#tests-und-grenzen)
+- [Fehlerbehebung](#fehlerbehebung)
+- [Projektstruktur](#projektstruktur)
+- [Entwicklung](#entwicklung)
+
+## Funktionen
+- **Ein Panel für mehrere Minds.** Das Profil wechselt mit dem Tab. Zeit, Warteschlange, Verlauf und Einstellungen sind pro Mind getrennt.
+- **Buttons statt Tippen.** Aktionen, Ereignisse und Zeitsprünge als Klick. Die Zeilen sind einheitlich formatiert, damit das Mind sie zuverlässig liest.
+- **Warteschlange.** Mehrere Aktionen sammeln, eigenen Text dazuschreiben, dann gemeinsam senden (Strg/Cmd + Enter).
+- **HUD.** Liest die Statuszeile `⏱ HH:MM · 📍 Ort · …` aus der letzten Antwort und zeigt Ort, Werte und Anzeigen. Die Spielzeit wird übernommen.
+- **Chat-Optik.** Terminal-Theme, Scanlines, Event-Zeilen als farbige Balken und Display-Rahmen für ASCII-Blöcke, jeweils in den Farben des Profils.
+- **Szenarien.** Vorgefertigte Einsätze mit festem Ort, Datum, Wetter und Auftrag, wahlweise mit geheimer Komplikation (Nightingale).
+- **Eigene Profile hochladen.** Import, Export, Löschen, Vorlage und ein Prompt, mit dem ein Chat-Modell ein Profil aus einer Mind-Beschreibung schreibt.
+
+## Installation
+1. Repository herunterladen oder klonen.
+2. In Chrome `chrome://extensions` öffnen und oben rechts den **Entwicklermodus** einschalten.
+3. **Entpackte Erweiterung laden** und diesen Ordner wählen.
+4. Einen Mind-Chat auf `venice.ai` öffnen und das Erweiterungs-Symbol anklicken, dann öffnet sich das Panel.
+
+Andere Erweiterungen, die dieselbe Seite umbauen (zum Beispiel die älteren Einzel-Erweiterungen *Ghostline Phone* oder *Nightingale Desk*), vorher ausschalten.
+Sie bearbeiten dieselben Absätze und führen zu leeren Sprechblasen.
+
+## Bedienung
+Das Panel besteht von oben nach unten aus:
+
+| Bereich | Zweck |
+|---|---|
+| **Mind-Leiste** | Zeigt das erkannte Mind und woran es erkannt wurde. Bei einem unbekannten Mind erscheint eine Profil-Auswahl mit *Zuordnen*. |
+| **PROFILE** | Importieren, Exportieren, Löschen, Vorlage, Generator-Prompt (siehe [Eigene Profile](#eigene-profile)). |
+| **Kopf, Uhr, Zeitknöpfe** | Logo, Spielzeit (editierbar), `+1 / +5 / +30 / +1h` und `echt` für die Systemzeit. Profile ohne Spielzeit blenden das aus. |
+| **HUD** | Zustand aus der letzten Antwort des Minds. |
+| **Reiter** | Die Befehle des Profils. Jeder Klick stellt eine Zeile in die Warteschlange. |
+| **Warteschlange** | Zeilen prüfen, einzeln entfernen, eigenen Text ergänzen, Vorschau, *Senden* oder *Leeren*. |
+| **Einstellungen** | Sofort senden, anhängen oder ersetzen, automatisch absenden, Reihenfolge, Präfixe, Uhr-Vorrückung, Chat-Darstellung, Konventions-Text. |
+| **Verlauf** | Die letzten 30 gesendeten Texte. Ein Klick fügt sie erneut ein. |
+
+**Konventions-Text einfügen** (Einstellungen) schreibt eine Erklärung der Zeilenformate in die Chatbox. Sinnvoll, wenn das Mind das Format noch nicht
+im Prompt kennt. Besser ist es, die Erklärung in den Prompt des Minds zu übernehmen.
+
+## Mind-Erkennung
+Reihenfolge, in der das Profil bestimmt wird:
+1. **Manuelle Zuordnung** (Mind-ID → Profil), im Panel gesetzt und entfernbar.
+2. **Mind-ID** aus der URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>` oder `venice.ai/minds/local/<MIND-ID>/edit`.
+3. **Seitentitel** (`titleMatch` des Profils, z. B. „Chat with Lana“).
+
+Die Mind-ID bleibt auch beim Umbenennen des Minds gleich. Kein passendes Profil heißt: Das Panel zeigt die Zuordnung, die Seite bleibt unverändert.
+
+## Eingebaute Profile
+| Profil | Mind-ID | Rolle | Reiter |
+|---|---|---|---|
+| **Nightingale** | `c7UAr2z` | Du bist der Operator im Ohr einer SIS-Feldoffizierin. | Szenario, Abfrage, Eingriff, Order, Funk, Lage, Schweigen |
+| **Ghostline** | `TOz4jww` | Du bist ein Hacker auf dem Handy einer Zielperson. | Zugriff, Eingriff, Kontakt, Welt, Zeit |
+
+Nightingale-Statuszeile: `⏱ HH:MM · 📍 Ort · 📶 Signal · 🩹 Zustand · Cover n/4`.
+Ghostline-Statuszeile: `⏱ HH:MM · 📍 Ort · 📱 App · 34 % · Verdacht 2/4`.
+
+## Eigene Profile
+Im Panel unter **PROFILE (IMPORTIEREN / EXPORTIEREN)**:
+
+- **IMPORTIEREN (.json):** ein Profil, eine Liste oder `{ "profiles": [...] }`. Das Profil wird geprüft, Fehler werden einzeln gemeldet. Eine gleiche id ersetzt dein eigenes Profil, eingebaute ids sind geschützt.
+- **VORLAGE:** lädt ein lauffähiges Beispiel.
+- **⭳ und ×:** Profil exportieren oder löschen. Exportierte eingebaute Profile sind gute Beispiele.
+- **PROMPT FÜR PROFIL-GENERATOR KOPIEREN:** kopiert den Prompt aus [PROMPT-Profil-Generator.md](PROMPT-Profil-Generator.md).
+  In einen normalen Chat einfügen, unten „MEIN MIND“ ausfüllen und die Antwort als `.json` speichern.
+
+Ein Profil kann Reiter mit Buttons, Eingabefeldern und Formularen, eine Statuszeile, Farben, Szenarien und sogar Slash-Befehle (`format: "raw"`) beschreiben.
+Das vollständige Format steht in [PROFILE-FORMAT.md](PROFILE-FORMAT.md). Ein Beispiel liegt in [examples/noir.profile.json](examples/noir.profile.json).
+
+**Wichtig:** Profile sind **Daten, kein Code**. Sie enthalten keine Funktionen und führen nichts aus.
+
+## Chat-Darstellung
+Das Content-Script stylt den Chat des erkannten Minds (abschaltbar unter *Einstellungen → Chat-Darstellung*):
+- **Terminal-Theme** und **Scanlines** in den Farben des Profils.
+- **Event-Zeilen.** Zeilen wie `[PRÄFIX · HH:MM · ART · …] Text` in deinen Nachrichten werden zu farbigen Balken. Die Farbe bestimmt `eventKinds` im Profil. Erkannt werden nur Präfixe in Großbuchstaben.
+- **Screens.** Codeblöcke, die mit `┌` oder `╔` beginnen oder `│` enthalten, bekommen einen Display-Rahmen.
+- **HUD-Zeile.** Die `⏱`-Zeile der Antwort wird hervorgehoben und ans Panel gemeldet.
+
+## Aufbau und Datenfluss
+```
+ Venice-Tab (venice.ai)                         Side Panel
+ ┌──────────────────────────────┐   ┌──────────────────────────────────────────┐
+ │ content.js                   │   │ sidepanel.html / .css / .js              │
+ │  · erkennt das Mind (URL/Titel)│◄──┤  · erkennt das Mind aus Tab-URL/-Titel   │
+ │  · füllt / sendet die Chatbox │   │  · baut Reiter aus dem Profil            │
+ │  · stylt den Chat            │   │  · Warteschlange, Verlauf, Einstellungen │
+ │  · liest die ⏱-Statuszeile   │──►│  · HUD aus dem Spielzustand              │
+ └───────────────┬──────────────┘   └───────────────────┬──────────────────────┘
+                 │      chrome.storage.local              │
+                 └────────  <id>:gameState, <id>:theme  ──┘
+                          mindMap, customProfiles, <id>:data
+        beide laden:  profiles/registry.js (Erkennung, Prüfung, Vorlagen)  +  profiles/*.js (eingebaute Profile)
+```
+- **`profiles/registry.js`** hält eingebaute und eigene Profile, erkennt das Mind, prüft Profile (Farben, Namen, reguläre Ausdrücke, Aufbau) und füllt die Platzhalter (`{item}`, `{field.x}`, `{x|Ersatz}`).
+- **`sidepanel.js`** rendert Reiter und Blöcke aus dem Profil und baut aus einer *Aktion* die Zeile für die Warteschlange.
+- **`content.js`** schreibt in die Chatbox (mit nativem Setter und `input`-Event, damit React den Wert übernimmt), klickt den Senden-Button und beobachtet die Seite per `MutationObserver`.
+- **`background.js`** öffnet das Panel beim Klick auf das Symbol.
+
+**Speicher** (`chrome.storage.local`): pro Mind `<id>:data` (Zeit, Einstellungen, Warteschlange, Verlauf, eigene Szenarien), `<id>:theme`, `<id>:gameState`. Global `mindMap` und `customProfiles`.
+
+## Sicherheit und Datenschutz
+- **Keine Netzwerkzugriffe.** Die Erweiterung sendet nichts an Dritte, alles bleibt im Browser (`chrome.storage.local`).
+- **Berechtigungen:** `sidePanel` (Panel), `storage` (Speicher), `tabs` (URL und Titel des Venice-Tabs lesen, Nachrichten senden), `scripting` (Content-Script nachladen) und Zugriff auf `venice.ai`.
+- **Kein fremder Code.** Importierte Profile sind JSON. Ihre Inhalte werden per `textContent` eingesetzt (`innerHTML` dient nur zum Leeren von Listen), es gibt kein `eval`. Farben, Namen und reguläre Ausdrücke werden vor dem Speichern geprüft.
+- Die Erweiterung liest den Chat nur, um die `⏱`-Statuszeile und die Event-Zeilen auszuwerten.
+
+## Tests und Grenzen
+**Getestet** (automatisiert, in einem Headless-Electron mit nachgebautem `chrome`-Objekt und nachgebauten Venice-Seiten):
+- Erkennung über Mind-ID, Titel und manuelle Zuordnung, Wechsel zwischen Minds mit getrennten Daten.
+- Aktionen aus jedem Reiter der eingebauten Profile erzeugen die erwarteten Zeilen, inklusive Zeit-Vorrückung, Pflichtangaben und Szenarien. Nicht jeder einzelne Button wurde angeklickt.
+- Import: kaputtes JSON, doppelte id, falsche Farben und ungültige reguläre Ausdrücke werden abgelehnt. Gültige Profile werden übernommen, ersetzt und gelöscht.
+- Content-Script: Event-Balken, HUD, Screens, Statuszeile lesen, Einfügen und Absenden, unbekanntes Mind bleibt unberührt.
+
+**Nicht getestet:**
+- Die Erweiterung in einem echten Chrome gegen die echte Venice-Seite, die echte Dateiauswahl und der echte Download beim Export, das Kopieren in die Zwischenablage.
+- Der Generator-Prompt wurde nicht mit einem Chat-Modell ausprobiert, nur sein Beispiel-JSON.
+- Der **Venice-Seitenaufbau** kann sich ändern. Das Plugin hängt an diesen Selektoren: `textarea[aria-label="Chat message input"]`, `[data-testid="minds-chat-send-button"]`,
+  `.assistant`, `.assistant-content`, `.codeblock`, `.minds-chat-container`, `.minds-chat-scroll`. Bricht etwas, sind sie die erste Anlaufstelle (`content.js`).
+
+## Fehlerbehebung
+| Problem | Ursache und Abhilfe |
+|---|---|
+| Sprechblasen sind leer | Eine zweite Erweiterung bearbeitet dieselben Absätze. Andere Venice-Erweiterungen ausschalten. |
+| „Kein venice.ai-Tab gefunden“ | Einen Venice-Tab öffnen. Das Panel nimmt den aktiven oder zuletzt benutzten. |
+| „Keine Chatbox gefunden“ | Der Mind-Chat ist nicht geöffnet oder Venice hat die Chatbox umgebaut (siehe Selektoren). |
+| Panel zeigt „Unbekanntes Mind“ | Kein Profil passt. Profil zuordnen oder importieren. Die Mind-ID steht in der URL. |
+| HUD bleibt leer | Das Mind beendet seine Antwort nicht mit der Statuszeile. Konventions-Text einfügen oder in den Prompt des Minds übernehmen. |
+| Balken erscheinen nicht | Das Präfix in den Einstellungen ist nicht in Großbuchstaben, oder *Event-Zeilen formatieren* ist aus. |
+| Import meldet Fehler | Die Meldung nennt das Feld. Ein Chat-Modell kann sie mit dem Generator-Prompt korrigieren. |
+
+## Projektstruktur
+```
+manifest.json                 Chrome-Manifest (MV3)
+background.js                 öffnet das Panel
+content.js                    Läuft auf venice.ai: Eingabe, Styling, Statuszeile
+sidepanel.html / .css / .js   Panel
+profiles/registry.js          Erkennung, Prüfung, Platzhalter
+profiles/nightingale.js       eingebautes Profil
+profiles/ghostline.js         eingebautes Profil
+examples/noir.profile.json    Beispiel für einen Import
+PROFILE-FORMAT.md             Format der Profile
+PROMPT-Profil-Generator.md    Prompt, der aus einer Mind-Beschreibung ein Profil erzeugt
+Profile/                      eigene Profile (lokal, nicht versioniert)
+```
+
+## Entwicklung
+- **Neues eingebautes Profil:** eine Datei in `profiles/` mit `MindProfiles.register({...})` anlegen (Daten wie im Format), in `manifest.json` unter `content_scripts.js`
+  vor `content.js` und in `sidepanel.html` vor `sidepanel.js` eintragen, außerdem in `ensureContentScript` in `sidepanel.js`. Die Prüfung über `MindProfiles.validate(profile)` gilt für eingebaute und eigene Profile gleich.
+- **Aktionen** werden deklarativ beschrieben (`parts`, `body`, `requires`, `shift`, `format`). Die Engine steht in `runAction` (`sidepanel.js`), die Platzhalter-Logik in `registry.js` (`fill`, `segments`, `parts`).
+- **Neue Block-Typen** gehören in `renderBlock` (`sidepanel.js`) und in die Prüfung in `registry.js`.
+- Nach Änderungen die Erweiterung auf `chrome://extensions` neu laden und den Venice-Tab neu laden.
