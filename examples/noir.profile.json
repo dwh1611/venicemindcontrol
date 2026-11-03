@@ -1,0 +1,257 @@
+{
+  "id": "noir",
+  "name": "Noir",
+  "mindIds": [
+    "HIER-DIE-MIND-ID"
+  ],
+  "titleMatch": "Noir",
+  "defaultTime": "23:10",
+  "prefixes": {
+    "actor": "DETECTIVE",
+    "world": "CITY"
+  },
+  "settingsLabels": {
+    "actor": "Präfix Detektiv",
+    "world": "Präfix Stadt"
+  },
+  "theme": {
+    "fg": "#e8b04a",
+    "dim": "#a87b2a",
+    "mut": "#8a7a5a",
+    "line": "#4a3a1a",
+    "bg": "#0b0905",
+    "bg2": "#141008",
+    "deep": "#070502",
+    "ink": "#1a1204",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#f1ddb2",
+    "glow": "232,176,74"
+  },
+  "header": {
+    "logo": "N O I R",
+    "meta": [
+      [
+        "CASE ",
+        "Nr. 417 · ● OFFEN · SID {sid}"
+      ]
+    ],
+    "prompt": "det@precinct:~#"
+  },
+  "eventKinds": {
+    "FRAGE": "#e8b04a",
+    "FOLGEN": "#ffb000",
+    "FUNK": "#6cc8ff",
+    "TIP": "#5fe0c4",
+    "REGEN": "#8a93a3"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "cash",
+        "regex": "(\\d{1,5})\\s*\\$",
+        "icon": "💵",
+        "unit": " $"
+      }
+    ],
+    "meters": [
+      {
+        "key": "heat",
+        "label": "HITZE",
+        "regex": "Hitze\\s*(\\d)\\s*\\/\\s*(\\d)",
+        "max": 4
+      }
+    ]
+  },
+  "statusRight": "💵 {cash|—} $",
+  "tabs": [
+    {
+      "id": "frage",
+      "label": "FRAGEN",
+      "blocks": [
+        {
+          "type": "hint",
+          "text": "Wen oder was befragst du?"
+        },
+        {
+          "type": "field",
+          "id": "ziel",
+          "label": "Person / Ort",
+          "placeholder": "Barkeeper, Hafenlager 9 …",
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": "BEFRAGEN",
+          "items": [
+            "Wo waren Sie gestern Nacht?",
+            "Kennen Sie diesen Mann?",
+            "Wer bezahlt Sie?"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "FRAGE"
+            ],
+            "body": [
+              "{item}",
+              "→ {field.ziel}"
+            ],
+            "requires": [
+              {
+                "need": "field.ziel",
+                "msg": "Wen befragst du?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "funk",
+      "label": "FUNK",
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": "Art",
+          "whoLabel": "Von",
+          "textLabel": "Inhalt",
+          "kinds": {
+            "FUNK": {
+              "who": "Zentrale",
+              "text": "Was kommt über Funk?",
+              "quick": [
+                "Verdächtiger gesehen.",
+                "Verstärkung unterwegs."
+              ]
+            },
+            "TIP": {
+              "who": "Informant",
+              "text": "Was flüstert er?",
+              "quick": [
+                "Lagerhaus am Pier."
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": "Inhalt fehlt."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "warten",
+      "label": "WARTEN",
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "ZEIT VERGEHT",
+          "items": [
+            {
+              "label": "10 min",
+              "m": 10
+            },
+            {
+              "label": "1 h",
+              "m": 60
+            },
+            {
+              "label": "bis 06:00",
+              "until": "06:00"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "FOLGEN"
+            ],
+            "body": [
+              "{item.label}",
+              "({until_minutes} min)"
+            ],
+            "shift": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "scenario",
+      "label": "FÄLLE",
+      "blocks": [
+        {
+          "type": "scenarios"
+        }
+      ]
+    }
+  ],
+  "scenarios": {
+    "items": [
+      {
+        "title": "Der Pier",
+        "city": "Hafen",
+        "time": "23:10",
+        "place": "A foggy pier, warehouse 9 ahead",
+        "mission": "Find out who is unloading crates"
+      }
+    ],
+    "fields": [
+      {
+        "key": "title",
+        "label": "Titel",
+        "ph": "Der Pier",
+        "required": true
+      },
+      {
+        "key": "time",
+        "label": "Uhrzeit",
+        "ph": "23:10"
+      },
+      {
+        "key": "place",
+        "label": "Ort",
+        "ph": "A foggy pier",
+        "area": true,
+        "required": true
+      },
+      {
+        "key": "mission",
+        "label": "Auftrag",
+        "ph": "Find out who is unloading crates",
+        "area": true
+      }
+    ],
+    "twist": false,
+    "template": {
+      "segments": [
+        "Place: {place}.",
+        "Mission: {mission}"
+      ],
+      "complication": {
+        "choose": "Complication: your choice, keep it hidden.",
+        "none": "Complication: none.",
+        "spoiler": "Complication: {twist}"
+      },
+      "closing": "Open with the detective already on the scene."
+    }
+  },
+  "convention": "Lines in square brackets starting with \"{hp}\" are the detective's actions: FRAGE = a question put to a person, FOLGEN = time passes while the detective watches. Lines starting with \"{wp}\" are events that do not come from the detective: FUNK = a radio message, TIP = an informant's whisper. The time in each line is the current in-world time and never runs backwards. Free text below the lines is the detective speaking or acting. End every reply with one status line in this exact form: ⏱ HH:MM · 📍 location · 150 $ · Hitze 2/4"
+}
