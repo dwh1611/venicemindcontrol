@@ -186,3 +186,6 @@ Profile/                      eigene Profile (lokal, nicht versioniert)
 - **Aktionen** werden deklarativ beschrieben (`parts`, `body`, `requires`, `shift`, `format`). Die Engine steht in `runAction` (`sidepanel.js`), die Platzhalter-Logik in `registry.js` (`fill`, `segments`, `parts`).
 - **Neue Block-Typen** gehören in `renderBlock` (`sidepanel.js`) und in die Prüfung in `registry.js`.
 - Nach Änderungen die Erweiterung auf `chrome://extensions` neu laden und den Venice-Tab neu laden.
+
+## Lizenz & Datenschutz
+MIT – siehe [LICENSE](LICENSE). Keine Datenerhebung: [PRIVACY.de.md](PRIVACY.de.md). Texte und Berechtigungsbegründungen für den Chrome Web Store: [STORE-LISTING.md](STORE-LISTING.md). Upload-Paket bauen mit `./build.sh`.

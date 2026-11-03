@@ -190,3 +190,6 @@ Profile/                      your own profiles (local, not versioned)
 - **Actions** are described declaratively (`parts`, `body`, `requires`, `shift`, `format`). The engine is `runAction` (`sidepanel.js`); the placeholder logic is in `registry.js` (`fill`, `segments`, `parts`).
 - **New block types** belong in `renderBlock` (`sidepanel.js`) and in the validation in `registry.js`.
 - After changes, reload the extension on `chrome://extensions` and reload the Venice tab.
+
+## License & privacy
+MIT – see [LICENSE](LICENSE). No data collection: [PRIVACY.md](PRIVACY.md). Chrome Web Store texts and permission justifications: [STORE-LISTING.md](STORE-LISTING.md). Build the upload package with `./build.sh`.
