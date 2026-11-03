@@ -1,0 +1,261 @@
+{
+  "id": "cafe",
+  "name": "Café-Stammgast",
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Café",
+  "defaultTime": "08:00",
+  "prefixes": {
+    "actor": "GUEST",
+    "world": "CAFE"
+  },
+  "settingsLabels": {
+    "actor": "Präfix Gast",
+    "world": "Präfix Café"
+  },
+  "theme": {
+    "fg": "#e8a76a",
+    "dim": "#a8703a",
+    "mut": "#8a7560",
+    "line": "#4a3322",
+    "bg": "#0e0a07",
+    "bg2": "#171009",
+    "deep": "#080503",
+    "ink": "#1d1108",
+    "warn": "#ffcc66",
+    "err": "#ff5252",
+    "txt": "#f3dcc2",
+    "glow": "232,167,106"
+  },
+  "header": {
+    "logo": "C A F É",
+    "meta": [
+      [
+        "ORT  ",
+        "Eckcafé · ● OFFEN · SID {sid}"
+      ]
+    ],
+    "prompt": "guest@cafe:~#"
+  },
+  "eventKinds": {
+    "ORDER": "#e8a76a",
+    "TALK": "#6cc8ff",
+    "WAIT": "#8a93a3",
+    "STAFF": "#5fe0c4",
+    "NOISE": "#ff8a5c"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "cash",
+        "regex": "(\\d{1,4})\\s*€",
+        "icon": "💶",
+        "unit": " €"
+      }
+    ],
+    "meters": [
+      {
+        "key": "mood",
+        "label": "STIMMUNG",
+        "regex": "Mood\\s*(\\d)\\s*\\/\\s*(\\d)",
+        "max": 5
+      }
+    ]
+  },
+  "statusRight": "💶 {cash|—} €",
+  "tabs": [
+    {
+      "id": "order",
+      "label": "BESTELLEN",
+      "blocks": [
+        {
+          "type": "hint",
+          "text": "Bestelle etwas. Mit Notiz, wenn du magst."
+        },
+        {
+          "type": "field",
+          "id": "note",
+          "label": "Notiz (optional)",
+          "placeholder": "Hafermilch, extra heiß",
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": "GETRÄNKE",
+          "items": [
+            "Espresso",
+            "Flat white",
+            "Tea",
+            "Hot chocolate"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "ORDER",
+              "{item}"
+            ],
+            "body": [
+              "{field.note}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": "ESSEN",
+          "items": [
+            {
+              "label": "Croissant",
+              "text": "one croissant"
+            },
+            {
+              "label": "Toast",
+              "text": "toast with jam"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "ORDER",
+              "{item.label}"
+            ],
+            "body": [
+              "{item.text}",
+              "– {field.note}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "talk",
+      "label": "REDEN",
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": "Art",
+          "whoLabel": "An",
+          "textLabel": "Text",
+          "kinds": {
+            "TALK": {
+              "who": "Barista / Nachbar",
+              "text": "Was sagst du?",
+              "quick": [
+                "Is this seat taken?",
+                "Do you have a charger?"
+              ]
+            }
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": "Text fehlt."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cafe",
+      "label": "CAFÉ",
+      "blocks": [
+        {
+          "type": "hint",
+          "text": "Dinge, die um den Gast herum passieren und nicht vom Gast kommen."
+        },
+        {
+          "type": "compose",
+          "kindLabel": "Art",
+          "whoLabel": "Quelle",
+          "textLabel": "Text",
+          "kinds": {
+            "NOISE": {
+              "who": "(optional)",
+              "text": "Was passiert um dich herum?",
+              "quick": [
+                "The espresso machine hisses.",
+                "A tram rattles past."
+              ]
+            },
+            "STAFF": {
+              "who": "Barista",
+              "text": "Was tut das Personal?",
+              "quick": [
+                "The barista wipes the counter.",
+                "Someone turns the music up."
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": "Text fehlt."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "time",
+      "label": "ZEIT",
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "ZEIT VERGEHT",
+          "items": [
+            {
+              "label": "5 min",
+              "m": 5
+            },
+            {
+              "label": "30 min",
+              "m": 30
+            },
+            {
+              "label": "bis Mittag",
+              "until": "12:00"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "WAIT"
+            ],
+            "body": [
+              "{item.label}",
+              "({until_minutes} min)"
+            ],
+            "shift": true
+          }
+        }
+      ]
+    }
+  ],
+  "convention": "Lines in square brackets starting with \"{hp}\" are the guest's actions: ORDER = something ordered from the counter, TALK = something the guest says, WAIT = time passes while the guest sits. Lines starting with \"{wp}\" are things that happen in the café and do not come from the guest: NOISE = sounds and small events, STAFF = what the staff do. The time in each line is the current in-world time and never runs backwards. Free text below the lines is the guest speaking or acting. End every reply with one status line in this exact form: ⏱ HH:MM · 📍 table · 12 € · Mood 3/5"
+}

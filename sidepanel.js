@@ -747,14 +747,16 @@ function initProfileManager() {
   $('pimport').onclick = () => $('pfile').click();
   $('pfile').onchange = async (e) => { await importProfiles(e.target.files[0]); e.target.value = ''; };
   $('ptemplate').onclick = () => download('vorlage.profile.json', JSON.stringify(TEMPLATE, null, 2));
-  $('pprompt').onclick = async () => {
+  const copyPrompt = (file) => async () => {
     try {
-      const md = await (await fetch(chrome.runtime.getURL('PROMPT-Profil-Generator.md'))).text();
+      const md = await (await fetch(chrome.runtime.getURL(file))).text();
       const text = md.split('<!-- PROMPT START -->')[1].split('<!-- PROMPT END -->')[0].trim();
       await navigator.clipboard.writeText(text);
-      pmsg('Prompt kopiert. In einen normalen Chat einfügen, unten „MEIN MIND“ ausfüllen, Antwort als .json speichern und importieren.');
+      pmsg('Prompt kopiert. In einen normalen Chat einfügen, unten „MEIN MIND“ bzw. „MY MIND“ ausfüllen, Antwort als .json speichern und importieren.');
     } catch (e) { pmsg('Kopieren nicht möglich: ' + e.message, false); }
   };
+  $('pprompt').onclick = copyPrompt('PROMPT-Profile-Generator.de.md');
+  $('pprompt_en').onclick = copyPrompt('PROMPT-Profile-Generator.md');
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area !== 'local' || !ch.customProfiles) return;
     MindProfiles.setCustom(ch.customProfiles.newValue);

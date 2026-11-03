@@ -1,88 +1,92 @@
-# Profil-Format
+# Profile format
 
-Ein Profil beschreibt ein Mind als **reine Daten (JSON)**. Es enthält keinen Code und führt keinen aus.
-Hochladen: Panel → *PROFILE* → *IMPORTIEREN (.json)*. Eine fertige Vorlage gibt es im Panel unter *VORLAGE*,
-eingebaute Profile lassen sich dort mit ⭳ als Beispiel exportieren.
+German version: [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md) · Step-by-step guide: [AUTHOR-GUIDE.md](AUTHOR-GUIDE.md)
 
-Wer ein Profil nicht von Hand schreiben will: *PROMPT FÜR PROFIL-GENERATOR KOPIEREN*, in einen Chat einfügen,
-das Mind beschreiben und die Antwort als `.json` speichern.
+A profile describes a mind as **plain data (JSON)**. It contains no code and runs none.
+Upload it: panel → *PROFILE* (profiles) → *IMPORTIEREN (.json)* (import). A ready template is available in the panel under *VORLAGE* (template),
+and built-in profiles can be exported there with ⭳ as examples. More examples are in [`examples/`](examples/).
 
-## Felder
+If you do not want to write a profile by hand: *PROMPT FÜR PROFIL-GENERATOR KOPIEREN (EN)* (copy profile generator prompt), paste it into a chat,
+describe the mind and save the answer as a `.json` file.
 
-| Feld | Pflicht | Bedeutung |
+> The panel interface itself is in German. Profile texts (labels, hints, button names) can be in any language.
+
+## Fields
+
+| Field | Required | Meaning |
 |---|---|---|
-| `id` | ja | 2–32 Zeichen: a–z, 0–9, `_`, `-`. Eingebaute ids (`nightingale`, `ghostline`) sind belegt. Gleiche id beim Import ersetzt das eigene Profil. |
-| `name` | ja | Anzeigename. |
-| `mindIds` | ja* | Mind-IDs aus der URL `…/minds/local/<ID>/…`. |
-| `titleMatch` | ja* | Regulärer Ausdruck für den Seitentitel (Rückfall). *Eines von beiden genügt. |
-| `defaultTime` | nein | Startzeit `HH:MM`. |
-| `prefixes` | ja | `actor` (Zeilen des Nutzers) und `world` (Ereignisse), z. B. `NIGHTINGALE` / `DESK`. |
-| `settingsLabels` | nein | Beschriftung der Präfix-Felder in den Einstellungen. |
-| `theme` | ja | Farben `fg dim mut line bg bg2 deep ink warn err txt` als `#hex`, `glow` als `"r,g,b"`. |
-| `header` | ja | `logo` (ASCII, `\n` für Zeilen), `meta` (Liste `[Schlüssel, Text]`, `{sid}` und `{lat}` sind Platzhalter, `●` blinkt), `prompt`. |
-| `eventKinds` | nein | Art → Farbe der Event-Balken im Chat, z. B. `{ "ORDER": "#ffb000" }`. Unbekannte Arten bekommen `fg`. |
-| `state` | nein | Wie die Statuszeile `⏱ HH:MM · …` gelesen wird (siehe unten). |
-| `statusRight` | nein | Vorlage für die Anzeige neben der Uhr, z. B. `"📶 {signal\|—}"`. |
-| `tabs` | ja | Reiter mit Blöcken (siehe unten). |
-| `scenarios` | nein | Einsätze (siehe unten). |
-| `convention` | nein | Text, der dem Mind die Zeilenformate erklärt (Button in den Einstellungen). `{hp}` und `{wp}` werden durch die Präfixe ersetzt. Ohne `convention` entfällt der Button. |
-| `clock` | nein | `false` blendet Uhr, Zeitknöpfe und „Uhr nach Senden“ aus (für Minds ohne Spielzeit). |
+| `id` | yes | 2-32 characters: a-z, 0-9, `_`, `-`. Built-in ids (`nightingale`, `ghostline`) are taken. Importing the same id replaces your own profile. |
+| `name` | yes | Display name. |
+| `mindIds` | yes* | Mind IDs from the URL `.../minds/local/<ID>/...`. |
+| `titleMatch` | yes* | Regular expression for the page title (fallback). *One of the two is enough. |
+| `defaultTime` | no | Start time `HH:MM`. |
+| `prefixes` | yes | `actor` (the user's lines) and `world` (events), e.g. `NIGHTINGALE` / `DESK`. Only capital letters, digits, `_`, `-`, 2-21 characters, starting with a letter. Otherwise the chat does not recognise the lines. |
+| `settingsLabels` | no | Labels of the prefix fields in the settings. |
+| `theme` | yes | Colours `fg dim mut line bg bg2 deep ink warn err txt` as `#hex`, `glow` as `"r,g,b"`. |
+| `header` | yes | `logo` (ASCII, `\n` for line breaks), `meta` (list of `[key, text]`, `{sid}` and `{lat}` are placeholders, `●` blinks), `prompt`. |
+| `eventKinds` | no | Kind -> colour of the event bars in the chat, e.g. `{ "ORDER": "#ffb000" }`. Unknown kinds get `fg`. |
+| `state` | no | How the status line `⏱ HH:MM · ...` is read (see below). |
+| `statusRight` | no | Template for the display next to the clock, e.g. `"📶 {signal\|—}"`. |
+| `tabs` | yes | Tabs with blocks (see below). |
+| `scenarios` | no | Missions (see below). |
+| `convention` | no | Text that explains the line formats to the mind (button in the settings). `{hp}` and `{wp}` are replaced by the prefixes. Without `convention` the button is hidden. |
+| `clock` | no | `false` hides the clock, the time buttons and "advance clock after sending" (for minds without in-world time). |
 
-## Event-Zeilen im Chat
-Das Panel schreibt `[PRÄFIX · HH:MM · TEIL1 · TEIL2] Text`. Das Content-Script erkennt sie an
-einem Präfix in Großbuchstaben und macht daraus Balken. `TEIL1` ist die „Art“ und bestimmt die Farbe.
+## Event lines in the chat
+The panel writes `[PREFIX · HH:MM · PART1 · PART2] text`. The content script recognises them by a
+prefix in capital letters and turns them into bars. `PART1` is the "kind" and decides the colour.
 
-## Statuszeile (`state`)
-Das Mind beendet jede Antwort mit `⏱ HH:MM · 📍 Ort · …`. Daraus lesen:
+## Status line (`state`)
+The mind ends every reply with `⏱ HH:MM · 📍 place · ...`. Read from it:
 
-- `parts`: Liste `{ "key": "loc", "icon": "📍" }`. Der Text hinter dem Symbol wird übernommen.
-- `numbers`: `{ "key": "battery", "regex": "(\\d{1,3})\\s*%", "icon": "🔋", "unit": " %" }`. Gruppe 1 ist der Wert.
-- `meters`: `{ "key": "risk", "label": "RISIKO", "regex": "Risiko\\s*(\\d)\\s*\\/\\s*(\\d)", "max": 4 }`. Gruppe 1 ist der Wert, Gruppe 2 das Maximum.
+- `parts`: list of `{ "key": "loc", "icon": "📍" }`. The text after the symbol is taken over.
+- `numbers`: `{ "key": "battery", "regex": "(\\d{1,3})\\s*%", "icon": "🔋", "unit": " %" }`. Group 1 is the value.
+- `meters`: `{ "key": "risk", "label": "RISK", "regex": "Risk\\s*(\\d)\\s*\\/\\s*(\\d)", "max": 4 }`. Group 1 is the value, group 2 the maximum.
 
-Reguläre Ausdrücke sind JSON-Strings, also mit doppeltem Backslash.
+Regular expressions are JSON strings, so backslashes are doubled.
 
-## Reiter und Blöcke
-Ein Reiter hat `id`, `label` und `blocks`. Block-Typen:
+## Tabs and blocks
+A tab has `id`, `label` and `blocks`. Block types:
 
-- `{"type":"hint","text":"…"}`
-- `{"type":"field","id":"ziel","label":"…","placeholder":"…","clear":true,"kind":"input|textarea|select","options":[{"value":"","label":""}]}`
-  `clear` leert das Feld nach jedem Klick im Reiter.
-- `{"type":"row","fields":[Feld, Feld]}` zwei Felder nebeneinander.
-- `{"type":"grid","cap":"ÜBERSCHRIFT","items":[…],"action":ACTION}` ein Button pro Eintrag. Einträge sind Text oder
-  `{ "label": "", "text": "", "m": 5, "until": "06:00" }` (`m` Minuten, `until` bis zu einer Uhrzeit).
-- `{"type":"compose","kindLabel":"","whoLabel":"","textLabel":"","kinds":{"ART":{"who":"Platzhalter","text":"Platzhalter","quick":["…"]}},"action":ACTION}`
-  Formular mit Art, Absender, Inhalt und Schnelltexten.
-- `{"type":"scenarios"}` zeigt die Einsatz-Auswahl (nur mit `scenarios`).
+- `{"type":"hint","text":"..."}`
+- `{"type":"field","id":"target","label":"...","placeholder":"...","clear":true,"kind":"input|textarea|select","options":[{"value":"","label":""}]}`
+  `clear` empties the field after every click in the tab.
+- `{"type":"row","fields":[field, field]}` two fields side by side.
+- `{"type":"grid","cap":"HEADING","items":[...],"action":ACTION}` one button per item. Items are text or
+  `{ "label": "", "text": "", "m": 5, "until": "06:00" }` (`m` minutes, `until` up to a time of day).
+- `{"type":"compose","kindLabel":"","whoLabel":"","textLabel":"","kinds":{"KIND":{"who":"placeholder","text":"placeholder","quick":["..."]}},"action":ACTION}`
+  A form with kind, sender, content and quick texts.
+- `{"type":"scenarios"}` shows the mission list (only together with `scenarios`).
 
 ## ACTION
 ```json
 {
   "who": "actor",
-  "parts": ["ZUGRIFF", "{item}"],
-  "body": ["{item.text}", "– {field.ziel}"],
-  "requires": [{ "need": "field.ziel", "msg": "Ziel fehlt." }],
-  "requiresAny": { "need": ["text", "who"], "msg": "Inhalt fehlt." },
-  "omitKinds": ["Frei"],
+  "parts": ["ACCESS", "{item}"],
+  "body": ["{item.text}", "- {field.target}"],
+  "requires": [{ "need": "field.target", "msg": "Target is missing." }],
+  "requiresAny": { "need": ["text", "who"], "msg": "Content is missing." },
+  "omitKinds": ["Free"],
   "shift": true
 }
 ```
-- `who`: `actor` oder `world` (welches Präfix die Zeile bekommt).
-- `format`: `"raw"` schreibt reinen Text ohne `[PRÄFIX · Uhrzeit …]`, z. B. `/scene Text` für Minds, die mit Slash-Befehlen gesteuert werden. Dann sind `parts` die Wörter vor dem Text (mit Leerzeichen verbunden), `who` entfällt. Ein Segment darf `\n` enthalten.
-- `parts`: die Teile hinter der Uhrzeit, getrennt durch `·`.
-- `body`: Segmente des Textes, mit Leerzeichen verbunden.
-- Ein Segment oder Teil entfällt, wenn ein Platzhalter darin leer ist. Mit `{x|Ersatz}` gibt es einen Ersatzwert.
-- `requires` / `requiresAny`: Pflichtangaben. Fehlt etwas, erscheint `msg` und nichts wird eingereiht.
-- `omitKinds`: Arten, bei denen `{kind}` leer bleibt.
-- `shift`: rückt die Uhr um `m` Minuten (oder bis `until`) vor. Platzhalter `{until_minutes}` ist nur bei `until` gefüllt.
+- `who`: `actor` or `world` (which prefix the line gets).
+- `format`: `"raw"` writes plain text without `[PREFIX · time ...]`, e.g. `/scene text` for minds steered with slash commands. Then `parts` are the words before the text (joined with spaces) and `who` is not needed. A segment may contain `\n`.
+- `parts`: the parts after the time, separated by `·`.
+- `body`: segments of the text, joined with spaces.
+- A segment or part is dropped if a placeholder in it is empty. `{x|fallback}` provides a fallback value.
+- `requires` / `requiresAny`: mandatory inputs. If something is missing, `msg` is shown and nothing is queued.
+- `omitKinds`: kinds for which `{kind}` stays empty.
+- `shift`: advances the clock by `m` minutes (or until `until`). The placeholder `{until_minutes}` is only filled for `until`.
 
-Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Felder), `{kind}`, `{who}`, `{text}` (compose), `{until_minutes}`.
+Placeholders: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (fields of the tab), `{kind}`, `{who}`, `{text}` (compose), `{until_minutes}`.
 
-## Szenarien (optional)
+## Scenarios (optional)
 ```json
 "scenarios": {
-  "items": [{ "title": "…", "city": "…", "time": "22:10", "place": "…" }],
-  "fields": [{ "key": "title", "label": "Titel", "ph": "…", "required": true },
-             { "key": "time", "label": "Uhrzeit", "half": true }],
+  "items": [{ "title": "...", "city": "...", "time": "22:10", "place": "..." }],
+  "fields": [{ "key": "title", "label": "Title", "ph": "...", "required": true },
+             { "key": "time", "label": "Time", "half": true }],
   "twist": true,
   "template": {
     "segments": ["Place: {place}.", "Mission: {mission}"],
@@ -92,9 +96,10 @@ Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Fel
   }
 }
 ```
-Jedes Szenario ist ein Objekt mit den `key`s aus `fields`. `{level}` ist die Härte (`light`, `medium`, `hard`),
-`{twist}` der Vorschlag aus dem Feld `twist` des Szenarios. Das Panel sendet `[WELT · HH:MM · SCENARIO · Titel] …`.
+Each scenario is an object with the `key`s from `fields`. `{level}` is the intensity (`light`, `medium`, `hard`),
+`{twist}` the suggestion from the scenario's `twist` field. Values have no final full stop, because the template adds it.
+The panel sends `[WORLD · HH:MM · SCENARIO · Title] ...`. Show the list with a tab that contains `{"type":"scenarios"}`.
 
-## Sicherheit
-- Importierte Dateien werden geprüft (Farben, Namen, reguläre Ausdrücke, Aufbau) und nur als Text angezeigt.
-- Es gibt kein `eval`, keinen Nachladen von Skripten und keine Netzwerkzugriffe aus Profilen.
+## Safety
+- Imported files are checked (colours, names, regular expressions, structure) and only inserted as text.
+- There is no `eval`, no loading of scripts and no network access from profiles.

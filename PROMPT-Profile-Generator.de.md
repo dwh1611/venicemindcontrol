@@ -1,7 +1,9 @@
 # Prompt: Profil-JSON für Mind Console erzeugen
 
+English version: [PROMPT-Profile-Generator.md](PROMPT-Profile-Generator.md)
+
 So geht's: Den Text zwischen den beiden Markierungen kopieren (oder im Panel unter *PROFILE* auf
-*PROMPT FÜR PROFIL-GENERATOR KOPIEREN* klicken), in einen **normalen Chat** einfügen (nicht in das Rollenspiel-Mind selbst),
+*PROMPT FÜR PROFIL-GENERATOR KOPIEREN (DE)* klicken), in einen **normalen Chat** einfügen (nicht in das Rollenspiel-Mind selbst),
 unten bei „MEIN MIND“ die Angaben ausfüllen und senden. Die Antwort als `.json` speichern und im Panel importieren.
 
 Hinweis: Die Mind-ID steht in der URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>`.
