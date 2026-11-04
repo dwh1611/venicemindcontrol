@@ -12,8 +12,8 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 > Status: v1.0.0. Tested with a headless Electron and a mocked `chrome` object, not in a real Chrome against the
 > real Venice site. See [Tests and limits](#tests-and-limits).
 >
-> The panel interface itself is in German. Profile texts (button names, hints) can be in any language.
-> Panel labels are quoted below as they appear, with an English gloss.
+> The panel is English by default and also available in German (see [Languages](#languages)). Profile texts (button names, hints) can be in any language.
+> Some panel labels below are quoted from the German interface, with an English gloss.
 
 ## Contents
 - [Features](#features)
