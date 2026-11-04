@@ -304,6 +304,7 @@ function status(msg, ok = true) {
   const e = $('status');
   e.textContent = msg ? (ok ? '✓ ' : '✗ ') + msg : '';
   e.className = 'status ' + (ok ? 'ok' : 'err');
+  if (msg && !ok) e.scrollIntoView({ block: 'nearest' }); // Fehler sitzt unter der Queue, sonst übersieht man ihn
   return null;
 }
 
@@ -437,6 +438,7 @@ const tabVals = (tab) => {
 function afterMake(tab, res) {
   if (res == null) return;
   const out = typeof res === 'string' ? { text: res } : res;
+  status(''); // alte Fehlermeldung nicht neben einem erfolgreichen Eintrag stehen lassen
   stage(out.text);
   if (out.shift) shiftTime(out.shift);
   tab.clear.forEach((id) => { tab.fields[id].value = ''; });
