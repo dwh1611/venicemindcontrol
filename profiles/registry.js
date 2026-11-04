@@ -87,6 +87,7 @@
       scenTpl: "scenarios.template.segments is missing.",
       convention: "convention must be a text (or be left out).",
       clock: "clock: true or false.",
+      relayBad: "relay: optional kind (capital letters) and who (\"actor\" or \"world\").",
       whenBad: "{w}: when is not a valid condition (key with eq, ne, lt, lte, gt, gte, match or exists; or all, any, not).",
     },
     de: {
@@ -121,6 +122,7 @@
       scenTpl: "scenarios.template.segments fehlt.",
       convention: "convention muss ein Text sein (oder ganz fehlen).",
       clock: "clock: true oder false.",
+      relayBad: "relay: optional kind (Großbuchstaben) und who (\"actor\" oder \"world\").",
       whenBad: "{w}: when ist keine gültige Bedingung (key mit eq, ne, lt, lte, gt, gte, match oder exists; oder all, any, not).",
     },
   };
@@ -232,6 +234,8 @@
     }
     if (p.convention != null && (typeof p.convention !== 'string' || !p.convention.trim())) err('convention');
     if (p.clock != null && typeof p.clock !== 'boolean') err('clock');
+    if (p.relay != null && (!isObj(p.relay) || (p.relay.kind != null && !/^[A-ZÄÖÜ][A-ZÄÖÜ0-9_-]{1,20}$/.test(p.relay.kind)) ||
+        (p.relay.who != null && !['actor', 'world'].includes(p.relay.who)))) err('relayBad');
     return { ok: !errors.length, errors };
   }
 

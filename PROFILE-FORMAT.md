@@ -115,6 +115,19 @@ buttons only appear when they make sense:
 - Until the first status line has been read, everything is shown. A missing value makes the condition false (except `exists: false`).
 - If the open tab gets hidden, the panel switches to the first visible tab.
 
+## Relay (`relay`, optional)
+With two Mind tabs open, the panel can copy the last reply of one Mind into the chat box of the other (*RELAY BETWEEN TWO MINDS*).
+The line is built with the **receiving** profile:
+
+```json
+"relay": { "kind": "DIALOGUE", "who": "world" }
+```
+
+- `kind`: event kind of the line (capital letters), default `RELAY`.
+- `who`: `"world"` (default) or `"actor"`, which prefix of the receiving profile is used.
+- Result: `[PREFIX · HH:MM · KIND · Name of the sender] reply text`. The time is the clock of the receiving mind (or its `defaultTime`).
+- Without `relay`, the defaults apply. Add the kind to `eventKinds` to colour it in the chat.
+
 ## Multilingual texts
 Any text value in a profile may be an object instead of a string:
 
