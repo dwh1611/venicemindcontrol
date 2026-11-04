@@ -723,7 +723,7 @@ function renderProfileManager() {
     const li = h('li');
     const isCustom = MindProfiles.custom.some((c) => c.id === p.id);
     li.appendChild(h('span', null, `${p.name} · ${(p.mindIds || []).join(', ') || 'nur Titel'}${isCustom ? ' · eigenes' : ''}`));
-    const ex = h('button', null, '⭳');
+    const ex = h('button', null, '↓');
     ex.title = 'Als JSON exportieren';
     ex.onclick = () => download(`${p.id}.profile.json`, JSON.stringify(p, null, 2));
     li.appendChild(ex);
