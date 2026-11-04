@@ -1,0 +1,61 @@
+{
+  "id": "minimal",
+  "name": "Minimal",
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "prefixes": {
+    "actor": "PLAYER",
+    "world": "WORLD"
+  },
+  "theme": {
+    "fg": "#7fb4ff",
+    "dim": "#4a7fc4",
+    "mut": "#6a809e",
+    "line": "#1b3555",
+    "bg": "#05080d",
+    "bg2": "#0a121d",
+    "deep": "#010502",
+    "ink": "#04101f",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#cfe0ff",
+    "glow": "108,170,255"
+  },
+  "header": {
+    "logo": "MINIMAL",
+    "meta": [
+      [
+        "INFO",
+        "the smallest valid profile"
+      ]
+    ],
+    "prompt": "player@game:~#"
+  },
+  "tabs": [
+    {
+      "id": "act",
+      "label": "ACT",
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "ACTIONS",
+          "items": [
+            "Look around",
+            "Wait",
+            "Move on"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "ACT"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
