@@ -87,6 +87,7 @@
       scenTpl: "scenarios.template.segments is missing.",
       convention: "convention must be a text (or be left out).",
       clock: "clock: true or false.",
+      whenBad: "{w}: when is not a valid condition (key with eq, ne, lt, lte, gt, gte, match or exists; or all, any, not).",
     },
     de: {
       notObj: "Die Datei enthält kein Profil-Objekt.",
@@ -120,12 +121,49 @@
       scenTpl: "scenarios.template.segments fehlt.",
       convention: "convention muss ein Text sein (oder ganz fehlen).",
       clock: "clock: true oder false.",
+      whenBad: "{w}: when ist keine gültige Bedingung (key mit eq, ne, lt, lte, gt, gte, match oder exists; oder all, any, not).",
     },
   };
   const explain = (errors, lang) => (errors || []).map((e) => {
     const tpl = (MSG[lang] || MSG.en)[e.k] || MSG.en[e.k] || e.k;
     return tpl.replace(/\{(\w+)\}/g, (_m, n) => (e.p && e.p[n] != null ? e.p[n] : ''));
   });
+
+  /* ---------- Bedingungen ("when") ----------
+     Blenden Reiter, Blöcke und Buttons abhängig vom zuletzt gelesenen Status (HUD) ein oder aus.
+       { "key": "hp", "lt": 50 }   eq, ne, lt, lte, gt, gte, match (RegExp), exists (true/false)
+       { "all": [..] }  { "any": [..] }  { "not": {..} }
+     Solange noch keine Statuszeile gelesen wurde (state == null), ist alles sichtbar. */
+  const OPS = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'match', 'exists'];
+  function validCond(c, depth = 0) {
+    if (!isObj(c) || depth > 6) return false;
+    if (Array.isArray(c.all)) return c.all.length > 0 && c.all.every((x) => validCond(x, depth + 1));
+    if (Array.isArray(c.any)) return c.any.length > 0 && c.any.every((x) => validCond(x, depth + 1));
+    if ('not' in c) return validCond(c.not, depth + 1);
+    if (typeof c.key !== 'string' || !c.key) return false;
+    const ops = OPS.filter((o) => o in c);
+    if (ops.length !== 1) return false;
+    if (ops[0] === 'match') { try { rx(c.match); } catch { return false; } }
+    if (ops[0] === 'exists') return typeof c.exists === 'boolean';
+    return ['string', 'number'].includes(typeof c[ops[0]]);
+  }
+  function test(c, state) {
+    if (!c || state == null) return true;
+    if (Array.isArray(c.all)) return c.all.every((x) => test(x, state));
+    if (Array.isArray(c.any)) return c.any.some((x) => test(x, state));
+    if ('not' in c) return !test(c.not, state);
+    const v = state[c.key];
+    if ('exists' in c) return (v != null && v !== '') === c.exists;
+    if (v == null || v === '') return false;
+    if ('match' in c) return rx(c.match).test(String(v));
+    const op = OPS.find((o) => o in c);
+    const a = Number(v), b = Number(c[op]);
+    const num = !Number.isNaN(a) && !Number.isNaN(b) && String(v).trim() !== '' && String(c[op]).trim() !== '';
+    if (op === 'eq') return num ? a === b : String(v) === String(c[op]);
+    if (op === 'ne') return num ? a !== b : String(v) !== String(c[op]);
+    if (!num) return false;
+    return op === 'lt' ? a < b : op === 'lte' ? a <= b : op === 'gt' ? a > b : a >= b;
+  }
 
   /* ---------- Prüfung ---------- */
   function validate(raw) {
@@ -167,10 +205,15 @@
         if (!t || typeof t.id !== 'string' || !t.label) { err('tabIdLabel', { i }); return; }
         if (ids.has(t.id)) err('tabDup', { i, id: t.id });
         ids.add(t.id);
+        if (t.when != null && !validCond(t.when)) err('whenBad', { w: `tabs[${i}]` });
         (t.blocks || []).forEach((b, j) => {
           const w = `tabs[${i}].blocks[${j}]`;
           if (!b || !BLOCKS.includes(b.type)) { err('blockType', { w, list: BLOCKS.join(', ') }); return; }
           if (b.action && b.action.format != null && b.action.format !== 'raw') err('rawOnly', { w });
+          if (b.when != null && !validCond(b.when)) err('whenBad', { w });
+          if (b.type === 'grid' && Array.isArray(b.items)) {
+            b.items.forEach((it, k) => { if (isObj(it) && it.when != null && !validCond(it.when)) err('whenBad', { w: `${w}.items[${k}]` }); });
+          }
           if (b.type === 'grid') {
             if (!Array.isArray(b.items) || !b.items.length) err('itemsMissing', { w });
             if (!isObj(b.action) || !Array.isArray(b.action.parts)) err('actionParts', { w });
@@ -257,6 +300,6 @@
     raw: (id) => [...builtins, ...custom].find((p) => p.id === id),
     register: (p) => builtins.push(p),
     setLang, resolve, explain,
-    setCustom, init, validate, detect, mindIdFromUrl, re, fill, segments, parts,
+    setCustom, init, validate, test, detect, mindIdFromUrl, re, fill, segments, parts,
   };
 })();

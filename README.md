@@ -39,6 +39,13 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **HUD.** Reads the status line `⏱ HH:MM · 📍 place · ...` from the last reply and shows place, values and meters. The in-world clock is taken over.
 - **Chat appearance.** Terminal theme, scanlines, event lines as coloured bars and display frames for ASCII blocks, in the colours of the profile.
 - **Scenarios.** Predefined missions with fixed place, date, weather and goal, optionally with a secret complication (Nightingale).
+- **Keyboard shortcuts.** `Alt+1…9` press the numbered button of the open tab, `Alt+←/→` switch tabs, `Alt+Z` removes the last line, `Alt+X` clears the queue, `Alt+F` searches the history, `Alt+T` focuses the clock.
+- **Favorites.** Save the queue as one button; it queues the lines again with the current in-world time.
+- **History with search and pins.** Pin entries, filter them, turn one into a favorite.
+- **Session export.** Markdown or JSON with history, queue, clock, HUD state and favorites.
+- **Saves.** Several named saves of clock, queue and history per mind.
+- **Conditional buttons.** Profiles can show tabs, blocks and buttons depending on the HUD values (`when`).
+- **Profile editor.** Edit, copy and create profiles in the panel with live validation and a preview that saves nothing.
 - **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
 - **Upload your own profiles.** Import, export, delete, template, and a prompt with which a chat model writes a profile from a description of your mind.
 
@@ -63,13 +70,15 @@ From top to bottom the panel consists of:
 | Area | Purpose |
 |---|---|
 | **Mind bar** | Shows the detected mind and how it was detected. For an unknown mind a profile selector with *ASSIGN* appears. |
-| **PROFILES** | Import, export, delete, template, generator prompt (see [Your own profiles](#your-own-profiles)). |
+| **PROFILES** | Import, export, edit, copy, delete, new profile in the editor, template, generator prompt (see [Your own profiles](#your-own-profiles)). |
 | **Header, clock, time buttons** | Logo, in-world time (editable), `+1 / +5 / +30 / +1h` and `now` for the system time. Profiles without in-world time hide this. |
 | **HUD** | State from the last reply of the mind. |
 | **Tabs** | The commands of the profile. Each click puts one line into the queue. |
 | **QUEUE** | Check lines, remove single ones, add your own text, preview, *SEND* or *CLEAR*. |
 | **SETTINGS** | Send immediately, append or replace, auto-send, order, prefixes, clock advance, chat appearance, convention text. |
-| **HISTORY** | The last 30 sent texts. One click inserts them again. |
+| **Favorites** | Appears above the tabs once you saved one. One click queues all its lines. |
+| **SAVES** | Named saves of clock, queue and history. Loading backs up the current state first. |
+| **HISTORY** | The last 100 sent texts plus pinned ones. Search, pin, click to insert again, export as `.md` or `.json`. |
 
 **INSERT CONVENTION TEXT** (in the settings) writes an explanation of the line formats into the chatbox. Useful if the mind does not
 know the format from its prompt yet. It is better to copy the explanation into the mind's prompt.

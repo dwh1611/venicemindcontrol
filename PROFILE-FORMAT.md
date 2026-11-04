@@ -100,6 +100,21 @@ Each scenario is an object with the `key`s from `fields`. `{level}` is the inten
 `{twist}` the suggestion from the scenario's `twist` field. Values have no final full stop, because the template adds it.
 The panel sends `[WORLD · HH:MM · SCENARIO · Title] ...`. Show the list with a tab that contains `{"type":"scenarios"}`.
 
+## Conditions (`when`)
+Tabs, blocks and grid items (objects) may have a `when` condition. It is checked against the last status line (the HUD values), so
+buttons only appear when they make sense:
+
+```json
+{ "label": "Heal", "when": { "key": "hp", "lt": 50 } }
+{ "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
+```
+
+- `key` is a state key (a `parts`, `numbers` or `meters` key from `state`, plus `time`; meters also have `<key>Max`).
+- Exactly one operator per condition: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (numbers or text), `match` (regular expression), `exists` (`true`/`false`).
+- Combine with `all` (and), `any` (or) and `not`.
+- Until the first status line has been read, everything is shown. A missing value makes the condition false (except `exists: false`).
+- If the open tab gets hidden, the panel switches to the first visible tab.
+
 ## Multilingual texts
 Any text value in a profile may be an object instead of a string:
 

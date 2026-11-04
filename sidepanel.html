@@ -25,6 +25,9 @@
         <button id="ptemplate" data-i18n="profiles.template">TEMPLATE</button>
       </div>
       <div class="row">
+        <button id="pnew" data-i18n="profiles.new">NEW PROFILE (EDITOR)</button>
+      </div>
+      <div class="row">
         <button id="pprompt" data-i18n="profiles.promptDe">COPY PROFILE-GENERATOR PROMPT (DE)</button>
         <button id="pprompt_en" data-i18n="profiles.promptEn">COPY PROFILE-GENERATOR PROMPT (EN)</button>
       </div>
@@ -32,6 +35,19 @@
       <div class="status" id="pmsg"></div>
       <p class="hint" data-i18n="profiles.hint">Custom profiles are plain data (JSON) and never run code. Format and guide: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (also in German).</p>
     </details>
+
+    <section class="editor" id="editor" hidden>
+      <div class="cap" id="edTitle">PROFILE EDITOR</div>
+      <p class="hint" data-i18n="editor.hint">Edit the JSON. Errors show up while you type. PREVIEW shows the profile in the panel without saving.</p>
+      <textarea id="edText" rows="22" spellcheck="false" wrap="off"></textarea>
+      <div class="status" id="edStatus"></div>
+      <ul id="edErrors"></ul>
+      <div class="row">
+        <button id="edPreview" data-i18n="editor.preview">PREVIEW</button>
+        <button id="edSave" class="primary" data-i18n="editor.save">SAVE</button>
+        <button id="edClose" data-i18n="editor.close">CLOSE</button>
+      </div>
+    </section>
 
     <div id="app" hidden>
       <header>
@@ -55,6 +71,11 @@
 
       <div class="hud" id="hud" hidden></div>
 
+      <section class="favs" id="favsBox" hidden>
+        <div class="cap"><span data-i18n="favs.cap">FAVORITES</span> <span class="hintinline" data-i18n="favs.hint">(click = queue all lines)</span></div>
+        <div class="grid" id="favs"></div>
+      </section>
+
       <nav class="tabs" id="tabs"></nav>
       <div id="panels"></div>
 
@@ -69,8 +90,22 @@
           <button class="primary" id="send">&gt; <span data-i18n="send.btn">SEND</span> <span class="key">Ctrl+⏎</span></button>
           <button id="clearQueue" data-i18n="clear.btn">CLEAR</button>
         </div>
+        <div class="row">
+          <input id="macroName" data-i18n-ph="macro.placeholder" placeholder="Favorite name" maxlength="24" />
+          <button id="macroSave" data-i18n="macro.save">★ SAVE QUEUE</button>
+        </div>
         <div class="status" id="status"></div>
       </section>
+
+      <details class="settings" id="slotsBox">
+        <summary data-i18n="slots.summary">SAVES</summary>
+        <p class="hint" data-i18n="slots.hint">A save keeps clock, queue, history and pins of this mind. Loading replaces the current state.</p>
+        <div class="row">
+          <input id="slotName" data-i18n-ph="slots.placeholder" placeholder="Name of the save" maxlength="32" />
+          <button id="slotSave" data-i18n="slots.save">SAVE</button>
+        </div>
+        <ul id="slotList"></ul>
+      </details>
 
       <details class="settings">
         <summary data-i18n="settings.summary">SETTINGS</summary>
@@ -97,11 +132,19 @@
         <button id="convention" data-i18n="settings.convention">INSERT CONVENTION TEXT</button>
         <p class="hint" data-i18n="settings.conventionHint">Inserts, once, an explanation of the line formats and the ⏱ status line into the chat box.</p>
         <button id="unassign" data-i18n="settings.unassign">REMOVE MIND ASSIGNMENT</button>
+        <div class="cap" data-i18n="keys.cap">KEYBOARD SHORTCUTS</div>
+        <p class="hint" data-i18n="keys.text">Ctrl/Cmd+Enter send · Alt+1…9 press the numbered button of the open tab · Alt+←/→ switch tab · Alt+Z remove last line · Alt+X clear queue · Alt+F search history · Alt+T focus clock</p>
       </details>
 
       <section class="log">
         <div class="cap"><span data-i18n="history.cap">HISTORY</span> <span class="hintinline" data-i18n="history.hint">(click = insert again)</span></div>
+        <input id="hsearch" type="search" data-i18n-ph="history.search" placeholder="Search history…" />
         <ul id="history"></ul>
+        <div class="row">
+          <button id="hExportMd" data-i18n="history.exportMd">EXPORT .md</button>
+          <button id="hExportJson" data-i18n="history.exportJson">EXPORT .json</button>
+          <button id="hClear" data-i18n="history.clear">CLEAR UNPINNED</button>
+        </div>
       </section>
 
       <div class="prompt" id="promptLine"></div>
