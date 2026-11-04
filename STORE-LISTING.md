@@ -52,4 +52,4 @@ No user data is collected, sold or transferred. Privacy policy URL:
 https://github.com/dwh1611/venicemindcontrol/blob/main/PRIVACY.md
 
 ## Graphics
-store/store-icon-512.png (icon), store/screenshot-*.png (1280×800), store/promo-tile-440x280.png
+store/store-icon-512.png (icon), store/screenshot-*.png (1280×800, 5 Stück / 5 files), store/promo-tile-440x280.png

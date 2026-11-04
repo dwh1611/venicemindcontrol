@@ -191,5 +191,14 @@ Profile/                      your own profiles (local, not versioned)
 - **New block types** belong in `renderBlock` (`sidepanel.js`) and in the validation in `registry.js`.
 - After changes, reload the extension on `chrome://extensions` and reload the Venice tab.
 
+## Screenshots
+
+| | | | |
+|---|---|---|---|
+| ![Nightingale](docs/screenshots/builtin-nightingale.png) | ![Ghostline](docs/screenshots/builtin-ghostline.png) | ![Profile](docs/screenshots/profile-manager.png) | ![Custom](docs/screenshots/custom-cafe.png) |
+| Built-in: Nightingale | Built-in: Ghostline | Profile manager | Custom profile (café) |
+
+![Unknown Mind](docs/screenshots/unknown-mind.png) ![Slash](docs/screenshots/custom-commands.png)
+
 ## License & privacy
 MIT – see [LICENSE](LICENSE). No data collection: [PRIVACY.md](PRIVACY.md). Chrome Web Store texts and permission justifications: [STORE-LISTING.md](STORE-LISTING.md). Build the upload package with `./build.sh`.
