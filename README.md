@@ -46,6 +46,7 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **Saves.** Several named saves of clock, queue and history per mind.
 - **Conditional buttons.** Profiles can show tabs, blocks and buttons depending on the HUD values (`when`).
 - **Profile editor.** Edit, copy and create profiles in the panel with live validation and a preview that saves nothing.
+- **Relay between two Minds.** Copy the last reply of one Mind into the chat box of another (game master and character), manually, never sent automatically unless you switch that on.
 - **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
 - **Upload your own profiles.** Import, export, delete, template, and a prompt with which a chat model writes a profile from a description of your mind.
 
@@ -77,6 +78,7 @@ From top to bottom the panel consists of:
 | **QUEUE** | Check lines, remove single ones, add your own text, preview, *SEND* or *CLEAR*. |
 | **SETTINGS** | Send immediately, append or replace, auto-send, order, prefixes, clock advance, chat appearance, convention text. |
 | **Favorites** | Appears above the tabs once you saved one. One click queues all its lines. |
+| **RELAY** | Pick two Mind tabs as A and B and copy the last reply from one into the other. Inserted only; sending is a separate switch. |
 | **SAVES** | Named saves of clock, queue and history. Loading backs up the current state first. |
 | **HISTORY** | The last 100 sent texts plus pinned ones. Search, pin, click to insert again, export as `.md` or `.json`. |
 

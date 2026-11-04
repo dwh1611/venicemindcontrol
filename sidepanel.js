@@ -243,6 +243,91 @@ function loadSlot(s) {
   status(t('slots.loaded', { name: s.name }));
 }
 
+/* ---------- Relay zwischen zwei Minds ---------- */
+const relay = { a: null, b: null }; // { id, title, name, profile }
+const lastRelayed = {};             // "ab" | "ba" -> Fingerabdruck der zuletzt weitergegebenen Antwort
+const relayRepeat = {};             // zweiter Klick auf dieselbe Antwort erlaubt
+
+async function describeTab(tab) {
+  const { mindMap } = await chrome.storage.local.get('mindMap');
+  const d = MindProfiles.detect(tab.url, tab.title, mindMap || {});
+  return { id: tab.id, title: tab.title || '', profile: d.profile, name: d.profile ? d.profile.name : (tab.title || `tab ${tab.id}`) };
+}
+
+function renderRelay() {
+  [['a', 'relayA'], ['b', 'relayB']].forEach(([slot, id]) => {
+    const r = relay[slot];
+    const e = $(id);
+    e.textContent = r ? `${r.name}${r.title && r.title !== r.name ? ' · ' + r.title : ''}` : t('relay.none');
+    e.classList.toggle('set', !!r);
+  });
+  const ready = !!(relay.a && relay.b);
+  $('relayAB').disabled = !ready;
+  $('relayBA').disabled = !ready;
+}
+
+async function setRelay(slot) {
+  const tab = await findVeniceTab();
+  if (!tab) return status(t('status.noTab'), false);
+  const other = relay[slot === 'a' ? 'b' : 'a'];
+  if (other && other.id === tab.id) return status(t('relay.same'), false);
+  relay[slot] = await describeTab(tab);
+  renderRelay();
+  status('');
+}
+
+// Frischer Stand des Tabs oder null, wenn er geschlossen wurde.
+async function relayTab(slot) {
+  const r = relay[slot];
+  if (!r) return null;
+  try { return await describeTab(await chrome.tabs.get(r.id)); } catch { relay[slot] = null; renderRelay(); return null; }
+}
+
+async function relayClock(dst, src) {
+  const ids = [dst, src].filter((x) => x && x.profile).map((x) => x.profile.id);
+  const s = await chrome.storage.local.get(ids.flatMap((id) => [`${id}:data`, `${id}:gameState`]));
+  for (const id of ids) {
+    const d = s[`${id}:data`]; if (d && d.time) return d.time;
+    const g = s[`${id}:gameState`]; if (g && g.time) return g.time;
+  }
+  // Noch keine Zeit bekannt: Startzeit des Ziel-Profils, damit die Zeile im Chat als Event erkannt wird.
+  return dst && dst.profile && dst.profile.clock !== false ? dst.profile.defaultTime || '12:00' : '';
+}
+
+const relayClean = (s) => String(s).replace(/[·[\]]/g, '').trim();
+
+// [PRÄFIX des Ziels · Uhrzeit · ART · Absender] Text der Antwort
+function relayLine(src, dst, reply, time, strip) {
+  const cfg = (dst.profile && dst.profile.relay) || {};
+  const prefix = dst.profile ? (cfg.who === 'actor' ? dst.profile.prefixes.actor : dst.profile.prefixes.world) : 'RELAY';
+  const body = reply.split('\n').filter((l) => !(strip && l.trim().startsWith('⏱'))).join('\n').trim();
+  const head = [prefix, time, cfg.kind || 'RELAY', relayClean(src.name)].filter(Boolean).join(' · ');
+  return `[${head}] ${body}`;
+}
+
+async function relayNow(from, to) {
+  const key = from + to;
+  const src = await relayTab(from);
+  const dst = await relayTab(to);
+  if (!src || !dst) return status(t('relay.needBoth'), false);
+  let res;
+  try {
+    await ensureContentScript(src.id);
+    res = await chrome.tabs.sendMessage(src.id, { type: 'lastReply' });
+  } catch (e) { return status(t('status.connection', { msg: e.message }), false); }
+  if (!res || !res.ok || !res.text) return status(t('relay.noReply', { name: src.name }), false);
+  // Schutz vor doppeltem Senden: dieselbe Antwort nur nach einem zweiten Klick erneut weitergeben.
+  const print = `${res.count}:${res.text.length}:${res.text.slice(-60)}`;
+  if (lastRelayed[key] === print && !relayRepeat[key]) { relayRepeat[key] = true; return status(t('relay.again'), false); }
+  const text = relayLine(src, dst, res.text, await relayClock(dst, src), $('relayStrip').checked);
+  const sendNow = $('relaySend').checked;
+  const ok = await inject(text, { send: sendNow, append: $('append').checked }, dst.id);
+  if (!ok) return;
+  lastRelayed[key] = print;
+  relayRepeat[key] = false;
+  status(t(sendNow ? 'relay.doneSent' : 'relay.done', { from: src.name, to: dst.name }));
+}
+
 /* ---------- Sitzungs-Export ---------- */
 const stamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
 
@@ -308,9 +393,9 @@ function status(msg, ok = true) {
   return null;
 }
 
-async function inject(text, { send: doSend, append }) {
+async function inject(text, { send: doSend, append }, tabId) {
   try {
-    const tab = await findVeniceTab();
+    const tab = tabId != null ? { id: tabId } : await findVeniceTab();
     if (!tab) { status(t('status.noTab'), false); return false; }
     await ensureContentScript(tab.id);
     const res = await chrome.tabs.sendMessage(tab.id, {
@@ -853,6 +938,11 @@ function initStatic() {
   $('hsearch').addEventListener('input', () => { historyFilter = $('hsearch').value.trim(); renderHistory(); });
   $('macroSave').onclick = () => addFav($('macroName').value.trim(), [...queue]);
   $('slotSave').onclick = saveSlot;
+  $('relaySetA').onclick = () => setRelay('a');
+  $('relaySetB').onclick = () => setRelay('b');
+  $('relayAB').onclick = () => relayNow('a', 'b');
+  $('relayBA').onclick = () => relayNow('b', 'a');
+  renderRelay();
   $('hExportMd').onclick = () => exportSession('md');
   $('hExportJson').onclick = () => exportSession('json');
   $('hClear').onclick = () => { history = history.filter((e) => e.pin); renderHistory(); save(); };

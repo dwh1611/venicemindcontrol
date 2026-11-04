@@ -43,6 +43,7 @@ Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingal
 - **Spielstände.** Mehrere benannte Stände von Uhr, Queue und Verlauf pro Mind.
 - **Bedingte Buttons.** Profile können Reiter, Blöcke und Buttons abhängig von den HUD-Werten ein- und ausblenden (`when`).
 - **Profil-Editor.** Profile im Panel bearbeiten, kopieren und neu anlegen, mit Live-Prüfung und einer Vorschau, die nichts speichert.
+- **Relay zwischen zwei Minds.** Die letzte Antwort eines Minds in die Chatbox eines anderen kopieren (Spielleiter und Figur), manuell und nie automatisch gesendet, solange du das nicht einschaltest.
 - **Mehrsprachige Oberfläche.** Standard ist Englisch, Deutsch ist enthalten. Umschalten mit der Sprachauswahl oben im Panel; Profile können eigene Übersetzungen mitbringen.
 - **Eigene Profile hochladen.** Import, Export, Löschen, Vorlage und ein Prompt, mit dem ein Chat-Modell ein Profil aus einer Mind-Beschreibung schreibt.
 
@@ -74,6 +75,7 @@ Das Panel besteht von oben nach unten aus:
 | **Warteschlange** | Zeilen prüfen, einzeln entfernen, eigenen Text ergänzen, Vorschau, *Senden* oder *Leeren*. |
 | **Einstellungen** | Sofort senden, anhängen oder ersetzen, automatisch absenden, Reihenfolge, Präfixe, Uhr-Vorrückung, Chat-Darstellung, Konventions-Text. |
 | **Favoriten** | Erscheint über den Reitern, sobald einer gespeichert ist. Ein Klick reiht alle Zeilen ein. |
+| **Relay** | Zwei Mind-Tabs als A und B wählen und die letzte Antwort des einen in den anderen kopieren. Nur eingefügt; Senden ist ein eigener Schalter. |
 | **Spielstände** | Benannte Stände von Uhr, Queue und Verlauf. Beim Laden wird der aktuelle Stand vorher gesichert. |
 | **Verlauf** | Die letzten 100 gesendeten Texte plus angepinnte. Suchen, anpinnen, Klick fügt erneut ein, Export als `.md` oder `.json`. |
 

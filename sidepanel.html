@@ -97,6 +97,19 @@
         <div class="status" id="status"></div>
       </section>
 
+      <details class="settings" id="relayBox">
+        <summary data-i18n="relay.summary">RELAY BETWEEN TWO MINDS</summary>
+        <p class="hint" data-i18n="relay.hint">Open two Mind chats in two tabs. Click a tab, then pick it as A or B. A relay copies the last reply of one Mind into the chat box of the other.</p>
+        <div class="relayrow"><span class="k">A</span><span id="relayA" class="relayname"></span><button id="relaySetA" data-i18n="relay.setA">USE ACTIVE TAB</button></div>
+        <div class="relayrow"><span class="k">B</span><span id="relayB" class="relayname"></span><button id="relaySetB" data-i18n="relay.setB">USE ACTIVE TAB</button></div>
+        <div class="row">
+          <button id="relayAB" data-i18n="relay.ab">A → B</button>
+          <button id="relayBA" data-i18n="relay.ba">B → A</button>
+        </div>
+        <label class="inline"><input type="checkbox" id="relayStrip" checked /> <span data-i18n="relay.strip">leave out the ⏱ status line</span></label>
+        <label class="inline"><input type="checkbox" id="relaySend" /> <span data-i18n="relay.send">send immediately after inserting (off by default)</span></label>
+      </details>
+
       <details class="settings" id="slotsBox">
         <summary data-i18n="slots.summary">SAVES</summary>
         <p class="hint" data-i18n="slots.hint">A save keeps clock, queue, history and pins of this mind. Loading replaces the current state.</p>

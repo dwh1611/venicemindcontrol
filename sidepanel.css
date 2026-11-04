@@ -190,3 +190,8 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 #edErrors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 #edErrors li { border-left: 2px solid var(--err); background: var(--deep); padding: 3px 6px; font-size: 11px; color: var(--err); word-break: break-word; }
 #edErrors li.jump { cursor: pointer; }
+
+.relayrow { display: flex; gap: 6px; align-items: center; }
+.relayrow .k { margin: 0; }
+.relayname { flex: 1; min-width: 0; font-size: 11px; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.relayname.set { color: var(--fg); }
