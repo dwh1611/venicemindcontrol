@@ -191,6 +191,7 @@
       'auto.stopped.idle': 'Stopped: no new reply for 3 minutes.',
       'auto.stopped.tab': 'Stopped: a tab was closed.',
       'auto.stopped.error': 'Stopped: {msg}',
+      'relay.pending': 'The reply in {name} is still being written.',
     },
 
     de: {
@@ -379,6 +380,7 @@
       'auto.stopped.idle': 'Gestoppt: 3 Minuten keine neue Antwort.',
       'auto.stopped.tab': 'Gestoppt: ein Tab wurde geschlossen.',
       'auto.stopped.error': 'Gestoppt: {msg}',
+      'relay.pending': 'Die Antwort in {name} wird noch geschrieben.',
     },
   };
 

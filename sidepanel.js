@@ -246,6 +246,9 @@ function loadSlot(s) {
 /* ---------- Relay zwischen zwei Minds ---------- */
 const relay = { a: null, b: null }; // { id, title, name, profile }
 const replyPrint = (res) => `${res.count}:${res.text.length}:${res.text.slice(-60)}`;
+// Venice zeigt während des Schreibens Platzhalter ("Loading...", "Thinking..."). Sie sind keine Antwort.
+const PLACEHOLDER = /^(loading|thinking|generating|typing|working|lädt|wird geladen|denkt nach|schreibt|generiert)(\s*(\.{2,}|…))?$/i;
+const cleanReply = (text) => String(text).split('\n').filter((l) => !PLACEHOLDER.test(l.trim())).join('\n').trim();
 const lastRelayed = {};             // "ab" | "ba" -> Fingerabdruck der zuletzt weitergegebenen Antwort
 const relayRepeat = {};             // zweiter Klick auf dieselbe Antwort erlaubt
 
@@ -318,10 +321,12 @@ async function relayNow(from, to) {
     res = await chrome.tabs.sendMessage(src.id, { type: 'lastReply' });
   } catch (e) { return status(t('status.connection', { msg: e.message }), false); }
   if (!res || !res.ok || !res.text) return status(t('relay.noReply', { name: src.name }), false);
+  const reply = cleanReply(res.text);
+  if (!reply) return status(t('relay.pending', { name: src.name }), false); // Antwort wird noch geschrieben
   // Schutz vor doppeltem Senden: dieselbe Antwort nur nach einem zweiten Klick erneut weitergeben.
-  const print = replyPrint(res);
+  const print = replyPrint({ count: res.count, text: reply });
   if (lastRelayed[key] === print && !relayRepeat[key]) { relayRepeat[key] = true; return status(t('relay.again'), false); }
-  const text = relayLine(src, dst, res.text, await relayClock(dst, src), $('relayStrip').checked);
+  const text = relayLine(src, dst, reply, await relayClock(dst, src), $('relayStrip').checked);
   const sendNow = $('relaySend').checked;
   const ok = await inject(text, { send: sendNow, append: $('append').checked }, dst.id);
   if (!ok) return;
@@ -362,7 +367,8 @@ async function autoStart() {
   // Ausgangslage: Was schon in den Chats steht, wird nicht weitergegeben.
   for (const [slot, tab] of [['a', a], ['b', b]]) {
     const r = await readReply(tab);
-    auto.seen[slot] = r && r.ok ? replyPrint(r) : '';
+    const body = r && r.ok ? cleanReply(r.text) : '';
+    auto.seen[slot] = body ? replyPrint({ count: r.count, text: body }) : '';
   }
   auto.on = true;
   auto.timer = setInterval(autoTick, AUTO_TICK_MS);
@@ -387,13 +393,14 @@ async function autoTick() {
     if (!tabs.a || !tabs.b) return autoStop('auto.stopped.tab');
     for (const [from, to] of pairs) {
       const r = await readReply(tabs[from]);
-      if (!r || !r.ok || !r.text) continue;
-      const print = replyPrint(r);
+      const body = r && r.ok ? cleanReply(r.text) : '';
+      if (!body) { delete auto.pending[from]; continue; } // noch nichts da oder nur Platzhalter
+      const print = replyPrint({ count: r.count, text: body });
       if (print === auto.seen[from]) { delete auto.pending[from]; continue; }
       const p = auto.pending[from];
       if (!p || p.print !== print) { auto.pending[from] = { print, since: Date.now() }; continue; } // noch im Fluss
       if (Date.now() - p.since < auto.wait * 1000) continue;
-      const text = relayLine(tabs[from], tabs[to], r.text, await relayClock(tabs[to], tabs[from]), $('relayStrip').checked);
+      const text = relayLine(tabs[from], tabs[to], body, await relayClock(tabs[to], tabs[from]), $('relayStrip').checked);
       const ok = await inject(text, { send: true, append: false }, tabs[to].id);
       if (!ok) return autoStop('auto.stopped.error', { msg: $('status').textContent.replace(/^✗ /, '') });
       auto.seen[from] = print;
