@@ -14,6 +14,14 @@ let history = [];
 let customScenarios = [];
 let tabs = [];           // { id, panel, fields: {id: el}, clear: [ids] }
 let currentMind = null;  // { mindId, source }
+let favs = [];           // [{ name, lines: ['[PREFIX · {t} · …]', …] }]
+let slots = [];          // [{ name, at, time, queue, history, userText }]
+let lastState = null;    // zuletzt gelesene Statuszeile (HUD), Grundlage für "when"
+let whenEls = [];        // [{ el, cond }]
+let historyFilter = '';
+let editing = false;     // Profil-Editor offen: keine automatische Mind-Erkennung
+let previewing = false;  // Entwurf wird angezeigt: nichts darf gespeichert werden
+const HISTORY_MAX = 100;
 
 const key = (s) => `${profile.id}:${s}`;
 const hp = () => $('hprefix').value.trim() || profile.prefixes.actor;
@@ -30,7 +38,7 @@ const DATA_IDS = ['time', 'hprefix', 'wprefix', 'advance', 'order'];
 const DATA_CHECKS = ['append', 'autosend', 'instant'];
 
 async function loadProfileData() {
-  const s = await chrome.storage.local.get([key('data'), key('theme'), key('gameState')]);
+  const s = await chrome.storage.local.get([key('data'), key('theme'), key('gameState'), key('favs'), key('slots')]);
   const d = s[key('data')] || {};
   $('time').value = d.time || profile.defaultTime || '12:00';
   $('hprefix').value = d.hprefix || profile.prefixes.actor;
@@ -44,17 +52,28 @@ async function loadProfileData() {
   history = d.history || [];
   queue = d.queue || [];
   customScenarios = d.customScenarios || [];
+  favs = s[key('favs')] || [];
+  slots = s[key('slots')] || [];
+  historyFilter = '';
+  $('hsearch').value = '';
   const t = { ...THEME_DEFAULT, ...(s[key('theme')] || {}) };
   Object.entries(THEME_IDS).forEach(([k, id]) => { $(id).checked = !!t[k]; });
   renderHud(s[key('gameState')]);
+  renderFavs();
+  renderSlots();
 }
 
 function save() {
-  if (!profile) return;
+  if (!profile || previewing) return;
   const d = { history, queue, customScenarios };
   DATA_IDS.forEach((id) => { d[id] = $(id).value; });
   DATA_CHECKS.forEach((id) => { d[id] = $(id).checked; });
   chrome.storage.local.set({ [key('data')]: d });
+}
+
+function saveExtra() {
+  if (!profile || previewing) return;
+  chrome.storage.local.set({ [key('favs')]: favs, [key('slots')]: slots });
 }
 
 /* ---------- Zeit ---------- */
@@ -78,8 +97,10 @@ function minutesUntil(hhmm) {
 }
 
 /* ---------- Warteschlange ---------- */
-function stage(text) {
-  queue.push(text);
+function stage(text) { stageMany([text]); }
+
+function stageMany(lines) {
+  queue.push(...lines);
   renderQueue();
   save();
   if ($('instant').checked) send();
@@ -111,14 +132,151 @@ function buildMessage() {
 
 function renderPreview() { $('preview').textContent = buildMessage() || t('preview.empty'); }
 
+const hhmm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+function trimHistory() {
+  let n = 0;
+  history = history.filter((e) => e.pin || ++n <= HISTORY_MAX);
+}
+
 function renderHistory() {
   const ul = $('history');
   ul.innerHTML = '';
-  history.forEach((e) => {
-    const li = h('li', null, e.text.length > 160 ? e.text.slice(0, 160) + '…' : e.text);
-    li.onclick = () => inject(e.text, { send: $('autosend').checked, append: $('append').checked });
+  const q = historyFilter.toLowerCase();
+  const shown = history.filter((e) => !q || e.text.toLowerCase().includes(q));
+  [...shown.filter((e) => e.pin), ...shown.filter((e) => !e.pin)].forEach((e) => {
+    const li = h('li', e.pin ? 'pinned' : null);
+    const body = h('span', 'htext', e.text.length > 160 ? e.text.slice(0, 160) + '…' : e.text);
+    body.onclick = () => inject(e.text, { send: $('autosend').checked, append: $('append').checked });
+    const meta = h('span', 'htime', e.at ? hhmm(e.at) : '');
+    const pin = h('button', null, e.pin ? '★' : '☆');
+    pin.title = t(e.pin ? 'history.unpin' : 'history.pin');
+    pin.onclick = () => { e.pin = !e.pin; trimHistory(); renderHistory(); save(); };
+    const fav = h('button', null, 'FAV');
+    fav.title = t('history.toFav');
+    fav.onclick = () => addFav($('macroName').value.trim() || e.text.split('\n')[0].slice(0, 24), e.text.split('\n').filter((l) => l.trim()));
+    li.append(meta, body, pin, fav);
     ul.appendChild(li);
   });
+  if (!ul.children.length) ul.appendChild(h('li', 'empty', t(history.length ? 'history.noMatch' : 'history.empty')));
+}
+
+/* ---------- Favoriten / Makros ---------- */
+// Die Uhrzeit wird beim Speichern durch {t} ersetzt und beim Ausführen durch die aktuelle ersetzt.
+const tokenize = (l) => l.replace(/^(\[[^\]·]*· )\d{1,2}:\d{2}/, '$1{t}');
+const detokenize = (l) => l.split('{t}').join(clock());
+
+function addFav(name, lines) {
+  if (!name) return status(t('favs.nameMissing'), false);
+  if (!lines.length) return status(t('favs.empty'), false);
+  favs = favs.filter((f) => f.name !== name);
+  favs.push({ name, lines: lines.map(tokenize) });
+  $('macroName').value = '';
+  renderFavs();
+  saveExtra();
+  status(t('favs.saved', { name }));
+}
+
+function renderFavs() {
+  const box = $('favs');
+  box.innerHTML = '';
+  $('favsBox').hidden = !favs.length;
+  favs.forEach((f) => {
+    const wrap = h('div', 'favitem');
+    const b = h('button', null, f.name);
+    b.title = f.lines.map(detokenize).join('\n');
+    b.onclick = () => stageMany(f.lines.map(detokenize));
+    const x = h('button', 'x', '×');
+    x.title = t('favs.delete');
+    x.onclick = () => { favs = favs.filter((g) => g !== f); renderFavs(); saveExtra(); };
+    wrap.append(b, x);
+    box.appendChild(wrap);
+  });
+}
+
+/* ---------- Spielstände ---------- */
+function renderSlots() {
+  const ul = $('slotList');
+  ul.innerHTML = '';
+  slots.forEach((s) => {
+    const li = h('li');
+    const d = new Date(s.at);
+    li.appendChild(h('span', null, `${s.name} · ${d.toLocaleDateString()} ${hhmm(s.at)} · ${s.time || '–'} · ${t('slots.counts', { q: s.queue.length, h: s.history.length })}`));
+    const load = h('button', null, t('slots.load'));
+    load.onclick = () => loadSlot(s);
+    const del = h('button', null, '×');
+    del.title = t('slots.delete');
+    del.onclick = () => { slots = slots.filter((x) => x !== s); renderSlots(); saveExtra(); };
+    li.append(load, del);
+    ul.appendChild(li);
+  });
+  if (!slots.length) ul.appendChild(h('li', 'empty', t('slots.none')));
+}
+
+const snapshot = (name) => ({ name, at: Date.now(), time: clock(), queue: [...queue], history: history.map((e) => ({ ...e })), userText: $('userText').value });
+
+function saveSlot() {
+  const name = $('slotName').value.trim();
+  if (!name) return status(t('slots.nameMissing'), false);
+  slots = slots.filter((s) => s.name !== name);
+  slots.push(snapshot(name));
+  $('slotName').value = '';
+  renderSlots();
+  saveExtra();
+  status(t('slots.saved', { name }));
+}
+
+function loadSlot(s) {
+  // Sicherung des aktuellen Stands, damit ein versehentliches Laden rückgängig zu machen ist.
+  const auto = t('slots.auto');
+  slots = slots.filter((x) => x.name !== auto);
+  slots.push(snapshot(auto));
+  if (s.time) $('time').value = s.time;
+  queue = [...s.queue];
+  history = s.history.map((e) => ({ ...e }));
+  $('userText').value = s.userText || '';
+  renderQueue();
+  renderHistory();
+  renderSlots();
+  save();
+  saveExtra();
+  status(t('slots.loaded', { name: s.name }));
+}
+
+/* ---------- Sitzungs-Export ---------- */
+const stamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+
+function sessionData() {
+  return {
+    format: 'mind-console-session', version: 1,
+    exportedAt: new Date().toISOString(),
+    profile: { id: profile.id, name: profile.name },
+    mindId: (currentMind && currentMind.mindId) || null,
+    clock: clock(),
+    state: lastState || null,
+    history: [...history].reverse().map((e) => ({ at: e.at ? new Date(e.at).toISOString() : null, pinned: !!e.pin, text: e.text })),
+    queue: [...queue],
+    favorites: favs.map((f) => ({ name: f.name, lines: f.lines })),
+  };
+}
+
+function sessionMarkdown(s) {
+  const out = [`# ${s.profile.name} – session`, '', `- Exported: ${s.exportedAt}`, `- Mind: ${s.mindId || '–'}`, `- Clock: ${s.clock || '–'}`];
+  if (s.state) out.push(`- Status: ${$('hud').textContent || JSON.stringify(s.state)}`);
+  out.push('', '## History', '');
+  if (!s.history.length) out.push('_empty_', '');
+  s.history.forEach((e) => { out.push(`${e.pinned ? '★ ' : ''}${e.at || ''}`.trim(), '', '```', e.text, '```', ''); });
+  if (s.queue.length) out.push('## Queue', '', '```', ...s.queue, '```', '');
+  if (s.favorites.length) { out.push('## Favorites', ''); s.favorites.forEach((f) => out.push(`**${f.name}**`, '', '```', ...f.lines, '```', '')); }
+  return out.join('\n');
+}
+
+function exportSession(kind) {
+  const s = sessionData();
+  const base = `${profile.id}-session-${stamp()}`;
+  if (kind === 'md') download(`${base}.md`, sessionMarkdown(s), 'text/markdown');
+  else download(`${base}.json`, JSON.stringify(s, null, 2));
+  status(t('history.exported'));
 }
 
 /* ---------- Venice-Tab ---------- */
@@ -172,7 +330,7 @@ async function send() {
   const ok = await inject(text, { send: $('autosend').checked || $('instant').checked, append: $('append').checked });
   if (!ok) return;
   history.unshift({ text, at: Date.now() });
-  history = history.slice(0, 30);
+  trimHistory();
   queue = [];
   $('userText').value = '';
   const adv = profile.clock === false ? 0 : parseInt($('advance').value, 10) || 0;
@@ -208,6 +366,46 @@ function runAction(a, scope) {
 function setTab(id) {
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === id));
   tabs.forEach((t) => { t.panel.hidden = t.id !== id; });
+  renderBadges();
+}
+
+/* ---------- Bedingungen ("when") ---------- */
+function applyWhen() {
+  whenEls.forEach(({ el, cond }) => { el.hidden = !MindProfiles.test(cond, lastState); });
+  const active = document.querySelector('.tab.active');
+  if (active && active.hidden) {
+    const first = [...document.querySelectorAll('.tab')].find((b) => !b.hidden);
+    if (first) setTab(first.dataset.tab);
+  }
+  renderBadges();
+}
+
+/* ---------- Tastenkürzel: Alt+1…9 drückt den n-ten sichtbaren Button des offenen Reiters ---------- */
+const badgeButtons = () => {
+  const panel = document.querySelector('.panel:not([hidden])');
+  return panel ? [...panel.querySelectorAll('.grid button')].filter((b) => !b.hidden).slice(0, 9) : [];
+};
+
+function renderBadges() {
+  document.querySelectorAll('button[data-key]').forEach((b) => b.removeAttribute('data-key'));
+  badgeButtons().forEach((b, i) => { b.dataset.key = String(i + 1); });
+}
+
+function shortcut(e) {
+  if (!profile || !e.altKey || e.ctrlKey || e.metaKey) return;
+  const m = /^Digit([1-9])$/.exec(e.code);
+  let handled = true;
+  if (m) { const b = badgeButtons()[Number(m[1]) - 1]; if (b) b.click(); }
+  else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+    const vis = [...document.querySelectorAll('.tab')].filter((b) => !b.hidden);
+    const i = vis.findIndex((b) => b.classList.contains('active'));
+    if (vis.length) setTab(vis[(i + (e.code === 'ArrowRight' ? 1 : vis.length - 1)) % vis.length].dataset.tab);
+  } else if (e.code === 'KeyZ') { queue.pop(); renderQueue(); save(); }
+  else if (e.code === 'KeyX') $('clearQueue').click();
+  else if (e.code === 'KeyF') $('hsearch').focus();
+  else if (e.code === 'KeyT') { $('time').focus(); $('time').select(); }
+  else handled = false;
+  if (handled) e.preventDefault();
 }
 
 function fieldEl(tab, f) {
@@ -245,6 +443,12 @@ function afterMake(tab, res) {
 }
 
 function renderBlock(tab, b) {
+  const before = tab.panel.childNodes.length;
+  renderBlockInner(tab, b);
+  if (b.when) [...tab.panel.childNodes].slice(before).forEach((el) => whenEls.push({ el, cond: b.when }));
+}
+
+function renderBlockInner(tab, b) {
   const el = tab.panel;
   if (b.type === 'hint') {
     el.appendChild(h('p', 'hint', b.text));
@@ -260,6 +464,7 @@ function renderBlock(tab, b) {
     b.items.forEach((it) => {
       const btn = h('button', null, typeof it === 'string' ? it : it.label);
       btn.onclick = () => afterMake(tab, runAction(b.action, { item: it, field: tabVals(tab) }));
+      if (it && it.when) whenEls.push({ el: btn, cond: it.when });
       grid.appendChild(btn);
     });
     el.appendChild(grid);
@@ -484,10 +689,12 @@ function renderTabs() {
   nav.innerHTML = '';
   panels.innerHTML = '';
   tabs = [];
+  whenEls = [];
   profile.tabs.forEach((def) => {
     const btn = h('button', 'tab', def.label);
     btn.dataset.tab = def.id;
     btn.onclick = () => setTab(def.id);
+    if (def.when) whenEls.push({ el: btn, cond: def.when });
     nav.appendChild(btn);
     const panel = h('section', 'panel');
     panel.dataset.panel = def.id;
@@ -504,7 +711,7 @@ const THEME_DEFAULT = { theme: true, scan: true, screens: true, events: true, sy
 const THEME_IDS = { theme: 'thTheme', scan: 'thScan', screens: 'thScreens', events: 'thEvents', sync: 'thSync' };
 
 function saveTheme() {
-  if (!profile) return;
+  if (!profile || previewing) return;
   const t = {};
   Object.entries(THEME_IDS).forEach(([k, id]) => { t[k] = $(id).checked; });
   chrome.storage.local.set({ [key('theme')]: t });
@@ -512,6 +719,8 @@ function saveTheme() {
 
 function renderHud(st) {
   const hud = $('hud');
+  lastState = st || null;
+  applyWhen();
   $('statusRight').textContent = profile.statusRight ? MindProfiles.fill(profile.statusRight, st || {}).text : '';
   if (!st || !st.time) { hud.hidden = true; return; }
   const spec = profile.state || {};
@@ -590,7 +799,7 @@ function showUnknown(mindId, title, reason) {
 
 let refreshing = false;
 async function refreshMind() {
-  if (refreshing) return;
+  if (refreshing || editing) return;
   refreshing = true;
   try {
     const tab = await findVeniceTab();
@@ -637,7 +846,14 @@ function initStatic() {
   };
   document.addEventListener('keydown', (e) => {
     if (profile && (e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); send(); }
+    else shortcut(e);
   });
+  $('hsearch').addEventListener('input', () => { historyFilter = $('hsearch').value.trim(); renderHistory(); });
+  $('macroSave').onclick = () => addFav($('macroName').value.trim(), [...queue]);
+  $('slotSave').onclick = saveSlot;
+  $('hExportMd').onclick = () => exportSession('md');
+  $('hExportJson').onclick = () => exportSession('json');
+  $('hClear').onclick = () => { history = history.filter((e) => e.pin); renderHistory(); save(); };
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area !== 'local') return;
     if (profile && ch[key('gameState')] && ch[key('gameState')].newValue) applyState(ch[key('gameState')].newValue);
@@ -681,9 +897,9 @@ const TEMPLATE = {
   convention: 'Lines in square brackets starting with "{hp}" are the user\'s actions. Lines starting with "{wp}" are events in the world. The time is the in-world time. End every answer with: ⏱ HH:MM · 📍 place',
 };
 
-const download = (name, text) => {
+const download = (name, text, mime = 'application/json') => {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.href = URL.createObjectURL(new Blob([text], { type: mime }));
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -730,6 +946,10 @@ function renderProfileManager() {
     ex.title = t('profiles.export');
     ex.onclick = () => download(`${p.id}.profile.json`, JSON.stringify(MindProfiles.raw(p.id) || p, null, 2));
     li.appendChild(ex);
+    const ed = h('button', null, isCustom ? t('profiles.edit') : t('profiles.copy'));
+    ed.title = t(isCustom ? 'profiles.editTitle' : 'profiles.copyTitle');
+    ed.onclick = () => (isCustom ? openEditor(MindProfiles.raw(p.id), { id: p.id }) : openEditor(copyOf(MindProfiles.raw(p.id)), { copy: true }));
+    li.appendChild(ed);
     if (isCustom) {
       const del = h('button', null, '×');
       del.title = t('profiles.delete');
@@ -749,6 +969,7 @@ function renderProfileManager() {
 function initProfileManager() {
   $('pimport').onclick = () => $('pfile').click();
   $('pfile').onchange = async (e) => { await importProfiles(e.target.files[0]); e.target.value = ''; };
+  $('pnew').onclick = () => openEditor(TEMPLATE, { fresh: true });
   $('ptemplate').onclick = () => download(t('profiles.templateFile'), JSON.stringify(TEMPLATE, null, 2));
   const copyPrompt = (file) => async () => {
     try {
@@ -768,6 +989,120 @@ function initProfileManager() {
     refreshMind();
   });
   renderProfileManager();
+}
+
+/* ---------- Profil-Editor ---------- */
+let edOrigId = null;
+let edTimer;
+
+function copyOf(raw) {
+  const taken = new Set(MindProfiles.list.map((p) => p.id));
+  let id = `${raw.id}-copy`;
+  for (let i = 2; taken.has(id); i++) id = `${raw.id}-copy${i}`;
+  const suffix = (n) => (typeof n === 'string' ? `${n} (copy)` : Object.fromEntries(Object.entries(n).map(([k, v]) => [k, `${v} (copy)`])));
+  // Die Kopie erkennt zunächst kein Mind selbst: mindIds leeren, Titel anpassen.
+  return { ...JSON.parse(JSON.stringify(raw)), id, name: suffix(raw.name), mindIds: [], titleMatch: '<edit me>' };
+}
+
+function lineCol(text, pos) {
+  const before = text.slice(0, pos).split('\n');
+  return { line: before.length, col: before[before.length - 1].length + 1 };
+}
+
+function jumpTo(pos) {
+  const ta = $('edText');
+  ta.focus();
+  ta.setSelectionRange(pos, Math.min(pos + 1, ta.value.length));
+  const { line } = lineCol(ta.value, pos);
+  const lh = parseFloat(getComputedStyle(ta).lineHeight) || 16;
+  ta.scrollTop = Math.max(0, (line - 3) * lh);
+}
+
+function edStatus(msg, ok = true) {
+  const e = $('edStatus');
+  e.textContent = msg;
+  e.className = 'status ' + (ok ? 'ok' : 'err');
+}
+
+// Prüft den Text im Editor. Gibt das Profil zurück, wenn es gültig ist, sonst null.
+function checkDraft() {
+  const ul = $('edErrors');
+  ul.innerHTML = '';
+  const text = $('edText').value;
+  let obj;
+  try { obj = JSON.parse(text); } catch (e) {
+    let pos = /position (\d+)/.exec(e.message);
+    let at = pos ? Number(pos[1]) : null;
+    if (at == null) { const lc = /line (\d+) column (\d+)/.exec(e.message); if (lc) { const lines = text.split('\n'); at = lines.slice(0, lc[1] - 1).reduce((n, l) => n + l.length + 1, 0) + Number(lc[2]) - 1; } }
+    const where = at != null ? lineCol(text, at) : null;
+    edStatus(t('editor.syntax'), false);
+    const li = h('li', 'jump', where ? t('editor.at', { line: where.line, col: where.col, msg: e.message }) : e.message);
+    if (at != null) li.onclick = () => jumpTo(at);
+    ul.appendChild(li);
+    return null;
+  }
+  const v = MindProfiles.validate(obj);
+  const problems = MindProfiles.explain(v.errors, I18n.lang);
+  if (v.ok && MindProfiles.builtins.some((b) => b.id === obj.id)) problems.push(t('profiles.idTaken', { id: obj.id }));
+  if (v.ok && edOrigId !== obj.id && MindProfiles.custom.some((c) => c.id === obj.id)) problems.push(t('editor.idExists', { id: obj.id }));
+  if (problems.length) {
+    edStatus(t('editor.problems', { n: problems.length }), false);
+    problems.forEach((m) => ul.appendChild(h('li', null, m)));
+    return null;
+  }
+  edStatus(t('editor.valid'));
+  return obj;
+}
+
+function openEditor(raw, opts = {}) {
+  editing = true;
+  previewing = false;
+  edOrigId = opts.id || null;
+  $('edTitle').textContent = t(opts.id ? 'editor.titleEdit' : 'editor.titleNew', { id: opts.id || '' });
+  $('edText').value = JSON.stringify(raw, null, 2);
+  $('app').hidden = true;
+  $('editor').hidden = false;
+  checkDraft();
+  if (opts.copy) edStatus(t('editor.copyNote'), true);
+  $('editor').scrollIntoView();
+}
+
+function closeEditor() {
+  editing = false;
+  previewing = false;
+  $('editor').hidden = true;
+  lastUnknown = '';
+  profile = null; // wieder das echte Profil des Tabs aufbauen
+  refreshMind();
+}
+
+async function previewDraft() {
+  const obj = checkDraft();
+  if (!obj) return;
+  previewing = true;
+  await applyProfile(MindProfiles.resolve(obj, I18n.lang));
+  edStatus(t('editor.previewing'));
+}
+
+async function saveDraft() {
+  const obj = checkDraft();
+  if (!obj) return;
+  const { customProfiles } = await chrome.storage.local.get('customProfiles');
+  const next = { ...(customProfiles || {}) };
+  if (edOrigId && edOrigId !== obj.id) delete next[edOrigId]; // umbenannt
+  next[obj.id] = obj;
+  previewing = false;
+  await chrome.storage.local.set({ customProfiles: next });
+  closeEditor();
+  pmsg(t('profiles.imported', { names: nameOf(obj) }));
+  $('profileMgr').open = true;
+}
+
+function initEditor() {
+  $('edText').addEventListener('input', () => { clearTimeout(edTimer); edTimer = setTimeout(checkDraft, 250); });
+  $('edPreview').onclick = previewDraft;
+  $('edSave').onclick = saveDraft;
+  $('edClose').onclick = closeEditor;
 }
 
 function setLanguage(l) {
@@ -799,6 +1134,7 @@ function initLang() {
   setLanguage(I18n.lang);
   initStatic();
   initProfileManager();
+  initEditor();
   await refreshMind();
   setInterval(refreshMind, 3000); // Fängt Seitenwechsel in der Single-Page-App ab
 })();

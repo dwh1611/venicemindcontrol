@@ -36,6 +36,13 @@ Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingal
 - **HUD.** Liest die Statuszeile `⏱ HH:MM · 📍 Ort · …` aus der letzten Antwort und zeigt Ort, Werte und Anzeigen. Die Spielzeit wird übernommen.
 - **Chat-Optik.** Terminal-Theme, Scanlines, Event-Zeilen als farbige Balken und Display-Rahmen für ASCII-Blöcke, jeweils in den Farben des Profils.
 - **Szenarien.** Vorgefertigte Einsätze mit festem Ort, Datum, Wetter und Auftrag, wahlweise mit geheimer Komplikation (Nightingale).
+- **Tastenkürzel.** `Alt+1…9` drückt den nummerierten Button des offenen Reiters, `Alt+←/→` wechselt den Reiter, `Alt+Z` entfernt die letzte Zeile, `Alt+X` leert die Queue, `Alt+F` durchsucht den Verlauf, `Alt+T` fokussiert die Uhr.
+- **Favoriten.** Die Queue als einen Button speichern; er reiht die Zeilen mit der aktuellen Spielzeit wieder ein.
+- **Verlauf mit Suche und Pins.** Einträge anpinnen, filtern oder zum Favoriten machen.
+- **Sitzungs-Export.** Markdown oder JSON mit Verlauf, Queue, Uhr, HUD-Stand und Favoriten.
+- **Spielstände.** Mehrere benannte Stände von Uhr, Queue und Verlauf pro Mind.
+- **Bedingte Buttons.** Profile können Reiter, Blöcke und Buttons abhängig von den HUD-Werten ein- und ausblenden (`when`).
+- **Profil-Editor.** Profile im Panel bearbeiten, kopieren und neu anlegen, mit Live-Prüfung und einer Vorschau, die nichts speichert.
 - **Mehrsprachige Oberfläche.** Standard ist Englisch, Deutsch ist enthalten. Umschalten mit der Sprachauswahl oben im Panel; Profile können eigene Übersetzungen mitbringen.
 - **Eigene Profile hochladen.** Import, Export, Löschen, Vorlage und ein Prompt, mit dem ein Chat-Modell ein Profil aus einer Mind-Beschreibung schreibt.
 
@@ -60,13 +67,15 @@ Das Panel besteht von oben nach unten aus:
 | Bereich | Zweck |
 |---|---|
 | **Mind-Leiste** | Zeigt das erkannte Mind und woran es erkannt wurde. Bei einem unbekannten Mind erscheint eine Profil-Auswahl mit *Zuordnen*. |
-| **PROFILE** | Importieren, Exportieren, Löschen, Vorlage, Generator-Prompt (siehe [Eigene Profile](#eigene-profile)). |
+| **PROFILE** | Importieren, Exportieren, Bearbeiten, Kopieren, Löschen, neues Profil im Editor, Vorlage, Generator-Prompt (siehe [Eigene Profile](#eigene-profile)). |
 | **Kopf, Uhr, Zeitknöpfe** | Logo, Spielzeit (editierbar), `+1 / +5 / +30 / +1h` und `echt` für die Systemzeit. Profile ohne Spielzeit blenden das aus. |
 | **HUD** | Zustand aus der letzten Antwort des Minds. |
 | **Reiter** | Die Befehle des Profils. Jeder Klick stellt eine Zeile in die Warteschlange. |
 | **Warteschlange** | Zeilen prüfen, einzeln entfernen, eigenen Text ergänzen, Vorschau, *Senden* oder *Leeren*. |
 | **Einstellungen** | Sofort senden, anhängen oder ersetzen, automatisch absenden, Reihenfolge, Präfixe, Uhr-Vorrückung, Chat-Darstellung, Konventions-Text. |
-| **Verlauf** | Die letzten 30 gesendeten Texte. Ein Klick fügt sie erneut ein. |
+| **Favoriten** | Erscheint über den Reitern, sobald einer gespeichert ist. Ein Klick reiht alle Zeilen ein. |
+| **Spielstände** | Benannte Stände von Uhr, Queue und Verlauf. Beim Laden wird der aktuelle Stand vorher gesichert. |
+| **Verlauf** | Die letzten 100 gesendeten Texte plus angepinnte. Suchen, anpinnen, Klick fügt erneut ein, Export als `.md` oder `.json`. |
 
 **Konventions-Text einfügen** (Einstellungen) schreibt eine Erklärung der Zeilenformate in die Chatbox. Sinnvoll, wenn das Mind das Format noch nicht
 im Prompt kennt. Besser ist es, die Erklärung in den Prompt des Minds zu übernehmen.
