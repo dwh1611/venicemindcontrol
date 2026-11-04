@@ -97,6 +97,21 @@ Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Fel
 Jedes Szenario ist ein Objekt mit den `key`s aus `fields`. `{level}` ist die Härte (`light`, `medium`, `hard`),
 `{twist}` der Vorschlag aus dem Feld `twist` des Szenarios. Das Panel sendet `[WELT · HH:MM · SCENARIO · Titel] …`.
 
+## Bedingungen (`when`)
+Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben. Sie wird gegen die zuletzt gelesene Statuszeile
+(die HUD-Werte) geprüft, so erscheinen Buttons nur, wenn sie sinnvoll sind:
+
+```json
+{ "label": "Heilen", "when": { "key": "hp", "lt": 50 } }
+{ "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
+```
+
+- `key` ist ein Status-Schlüssel (ein `parts`-, `numbers`- oder `meters`-Schlüssel aus `state`, dazu `time`; Meter haben auch `<key>Max`).
+- Genau ein Operator je Bedingung: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (Zahlen oder Text), `match` (regulärer Ausdruck), `exists` (`true`/`false`).
+- Verknüpfen mit `all` (und), `any` (oder) und `not`.
+- Solange noch keine Statuszeile gelesen wurde, ist alles sichtbar. Ein fehlender Wert macht die Bedingung falsch (außer `exists: false`).
+- Wird der offene Reiter ausgeblendet, wechselt das Panel zum ersten sichtbaren Reiter.
+
 ## Mehrsprachige Texte
 Jeder Textwert in einem Profil darf statt eines Strings ein Objekt sein:
 
