@@ -9,6 +9,11 @@
   <div class="crt" aria-hidden="true"></div>
 
   <main class="term">
+    <div class="autobar" id="autoBar" hidden>
+      <span id="autoBarText"></span>
+      <button id="autoStop" class="primary" data-i18n="auto.stop">STOP</button>
+    </div>
+
     <div class="langbar">
       <label class="inline"><span class="k" data-i18n="lang.label">Language</span>
         <select id="lang" aria-label="Language"></select>
@@ -108,6 +113,20 @@
         </div>
         <label class="inline"><input type="checkbox" id="relayStrip" checked /> <span data-i18n="relay.strip">leave out the ⏱ status line</span></label>
         <label class="inline"><input type="checkbox" id="relaySend" /> <span data-i18n="relay.send">send immediately after inserting (off by default)</span></label>
+        <div class="cap" data-i18n="auto.cap">AUTO-FORWARD</div>
+        <p class="hint" data-i18n="auto.hint">Forwards every new, finished reply on its own and SENDS it. It stops after the maximum, when a tab is closed, after 3 minutes without a new reply, or with STOP. Replies already in the chats are not forwarded.</p>
+        <label><span data-i18n="auto.mode">Direction</span>
+          <select id="autoMode">
+            <option value="ab" data-i18n="auto.mode.ab">A → B only</option>
+            <option value="ba" data-i18n="auto.mode.ba">B → A only</option>
+            <option value="both" data-i18n="auto.mode.both">A ⇄ B (back and forth)</option>
+          </select>
+        </label>
+        <div class="cols">
+          <label><span data-i18n="auto.max">Max. forwards</span><input id="autoMax" type="number" min="1" max="50" value="5" /></label>
+          <label><span data-i18n="auto.wait">Reply settled after (s)</span><input id="autoWait" type="number" min="1" max="30" value="4" /></label>
+        </div>
+        <button id="autoStart" class="primary" data-i18n="auto.start">START AUTO-FORWARD</button>
       </details>
 
       <details class="settings" id="slotsBox">

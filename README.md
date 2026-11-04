@@ -46,7 +46,8 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **Saves.** Several named saves of clock, queue and history per mind.
 - **Conditional buttons.** Profiles can show tabs, blocks and buttons depending on the HUD values (`when`).
 - **Profile editor.** Edit, copy and create profiles in the panel with live validation and a preview that saves nothing.
-- **Relay between two Minds.** Copy the last reply of one Mind into the chat box of another (game master and character), manually, never sent automatically unless you switch that on.
+- **Relay between two Minds.** Copy the last reply of one Mind into the chat box of another (game master and character). Manual relay only inserts; sending is a separate switch.
+- **Auto-forward.** Optional: new, finished replies are forwarded and sent on their own, one way or back and forth, with a maximum number of forwards, a settle time, a red STOP bar and several automatic stops.
 - **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
 - **Upload your own profiles.** Import, export, delete, template, and a prompt with which a chat model writes a profile from a description of your mind.
 
@@ -78,9 +79,11 @@ From top to bottom the panel consists of:
 | **QUEUE** | Check lines, remove single ones, add your own text, preview, *SEND* or *CLEAR*. |
 | **SETTINGS** | Send immediately, append or replace, auto-send, order, prefixes, clock advance, chat appearance, convention text. |
 | **Favorites** | Appears above the tabs once you saved one. One click queues all its lines. |
-| **RELAY** | Pick two Mind tabs as A and B and copy the last reply from one into the other. Inserted only; sending is a separate switch. |
+| **RELAY** | Pick two Mind tabs as A and B and copy the last reply from one into the other. Inserted only; sending is a separate switch. *AUTO-FORWARD* does this on its own and sends (see below). |
 | **SAVES** | Named saves of clock, queue and history. Loading backs up the current state first. |
 | **HISTORY** | The last 100 sent texts plus pinned ones. Search, pin, click to insert again, export as `.md` or `.json`. |
+
+**Auto-forward** (inside *RELAY*): choose a direction (A → B, B → A or back and forth), the maximum number of forwards and how long a reply must stay unchanged to count as finished. After *START* the panel watches both tabs and forwards each **new** reply, replacing the chat box content and sending it. Replies that are already in the chats at the start are not forwarded; to begin a conversation, send the first message in one tab yourself. It stops on its own when the maximum is reached, when a tab is closed, after 3 minutes without a new reply, or when you press *STOP* in the red bar at the top. Keep the panel open: closing it stops the automation. Chrome may slow down tabs in the background, so replies can arrive later.
 
 **INSERT CONVENTION TEXT** (in the settings) writes an explanation of the line formats into the chatbox. Useful if the mind does not
 know the format from its prompt yet. It is better to copy the explanation into the mind's prompt.

@@ -245,6 +245,7 @@ function loadSlot(s) {
 
 /* ---------- Relay zwischen zwei Minds ---------- */
 const relay = { a: null, b: null }; // { id, title, name, profile }
+const replyPrint = (res) => `${res.count}:${res.text.length}:${res.text.slice(-60)}`;
 const lastRelayed = {};             // "ab" | "ba" -> Fingerabdruck der zuletzt weitergegebenen Antwort
 const relayRepeat = {};             // zweiter Klick auf dieselbe Antwort erlaubt
 
@@ -269,6 +270,7 @@ function renderRelay() {
 async function setRelay(slot) {
   const tab = await findVeniceTab();
   if (!tab) return status(t('status.noTab'), false);
+  if (auto.on) autoStop('auto.stopped.manual'); // anderer Tab: Automatik anhalten
   const other = relay[slot === 'a' ? 'b' : 'a'];
   if (other && other.id === tab.id) return status(t('relay.same'), false);
   relay[slot] = await describeTab(tab);
@@ -317,7 +319,7 @@ async function relayNow(from, to) {
   } catch (e) { return status(t('status.connection', { msg: e.message }), false); }
   if (!res || !res.ok || !res.text) return status(t('relay.noReply', { name: src.name }), false);
   // Schutz vor doppeltem Senden: dieselbe Antwort nur nach einem zweiten Klick erneut weitergeben.
-  const print = `${res.count}:${res.text.length}:${res.text.slice(-60)}`;
+  const print = replyPrint(res);
   if (lastRelayed[key] === print && !relayRepeat[key]) { relayRepeat[key] = true; return status(t('relay.again'), false); }
   const text = relayLine(src, dst, res.text, await relayClock(dst, src), $('relayStrip').checked);
   const sendNow = $('relaySend').checked;
@@ -326,6 +328,88 @@ async function relayNow(from, to) {
   lastRelayed[key] = print;
   relayRepeat[key] = false;
   status(t(sendNow ? 'relay.doneSent' : 'relay.done', { from: src.name, to: dst.name }));
+}
+
+/* ---------- Auto-Forward ----------
+   Beobachtet die beiden Tabs und gibt jede neue, fertige Antwort selbst weiter (und sendet sie).
+   "Fertig" heißt: die Antwort hat sich für auto.wait Sekunden nicht mehr verändert.
+   Schutz vor Endlosschleifen: Maximalzahl, Stopp bei geschlossenem Tab, Leerlauf-Timeout, STOP-Leiste. */
+const AUTO_TICK_MS = 1000;
+const AUTO_IDLE_MS = 180000;
+const auto = { on: false, timer: null, busy: false, rounds: 0, max: 5, wait: 4, mode: 'ab', seen: {}, pending: {}, lastActivity: 0 };
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+async function readReply(tab) {
+  try { return await chrome.tabs.sendMessage(tab.id, { type: 'lastReply' }); } catch { /* Content-Script fehlt evtl. noch */ }
+  try { await ensureContentScript(tab.id); return await chrome.tabs.sendMessage(tab.id, { type: 'lastReply' }); } catch { return null; }
+}
+
+function renderAuto() {
+  $('autoBar').hidden = !auto.on;
+  $('autoBarText').textContent = auto.on ? t('auto.bar', { n: auto.rounds, max: auto.max }) : '';
+  $('autoStart').disabled = auto.on;
+  ['autoMode', 'autoMax', 'autoWait'].forEach((id) => { $(id).disabled = auto.on; });
+}
+
+async function autoStart() {
+  const a = await relayTab('a');
+  const b = await relayTab('b');
+  if (!a || !b) return status(t('relay.needBoth'), false);
+  auto.mode = $('autoMode').value;
+  auto.max = clamp(parseInt($('autoMax').value, 10) || 5, 1, 50);
+  auto.wait = clamp(parseInt($('autoWait').value, 10) || 4, 1, 30);
+  auto.rounds = 0; auto.pending = {}; auto.seen = {}; auto.lastActivity = Date.now();
+  // Ausgangslage: Was schon in den Chats steht, wird nicht weitergegeben.
+  for (const [slot, tab] of [['a', a], ['b', b]]) {
+    const r = await readReply(tab);
+    auto.seen[slot] = r && r.ok ? replyPrint(r) : '';
+  }
+  auto.on = true;
+  auto.timer = setInterval(autoTick, AUTO_TICK_MS);
+  renderAuto();
+  status(t('auto.started'));
+}
+
+function autoStop(key, params) {
+  clearInterval(auto.timer);
+  auto.timer = null;
+  auto.on = false;
+  renderAuto();
+  if (key) status(t(key, params), key === 'auto.stopped.manual' || key === 'auto.stopped.max');
+}
+
+async function autoTick() {
+  if (!auto.on || auto.busy) return;
+  auto.busy = true;
+  try {
+    const pairs = auto.mode === 'both' ? [['a', 'b'], ['b', 'a']] : auto.mode === 'ab' ? [['a', 'b']] : [['b', 'a']];
+    const tabs = { a: await relayTab('a'), b: await relayTab('b') };
+    if (!tabs.a || !tabs.b) return autoStop('auto.stopped.tab');
+    for (const [from, to] of pairs) {
+      const r = await readReply(tabs[from]);
+      if (!r || !r.ok || !r.text) continue;
+      const print = replyPrint(r);
+      if (print === auto.seen[from]) { delete auto.pending[from]; continue; }
+      const p = auto.pending[from];
+      if (!p || p.print !== print) { auto.pending[from] = { print, since: Date.now() }; continue; } // noch im Fluss
+      if (Date.now() - p.since < auto.wait * 1000) continue;
+      const text = relayLine(tabs[from], tabs[to], r.text, await relayClock(tabs[to], tabs[from]), $('relayStrip').checked);
+      const ok = await inject(text, { send: true, append: false }, tabs[to].id);
+      if (!ok) return autoStop('auto.stopped.error', { msg: $('status').textContent.replace(/^✗ /, '') });
+      auto.seen[from] = print;
+      delete auto.pending[from];
+      lastRelayed[from + to] = print;
+      auto.rounds++;
+      auto.lastActivity = Date.now();
+      renderAuto();
+      status(t('auto.forwarded', { from: tabs[from].name, to: tabs[to].name, n: auto.rounds, max: auto.max }));
+      if (auto.rounds >= auto.max) return autoStop('auto.stopped.max', { max: auto.max });
+      break; // pro Takt höchstens eine Weitergabe
+    }
+    if (auto.on && Date.now() - auto.lastActivity > AUTO_IDLE_MS) autoStop('auto.stopped.idle');
+  } finally {
+    auto.busy = false;
+  }
 }
 
 /* ---------- Sitzungs-Export ---------- */
@@ -942,7 +1026,10 @@ function initStatic() {
   $('relaySetB').onclick = () => setRelay('b');
   $('relayAB').onclick = () => relayNow('a', 'b');
   $('relayBA').onclick = () => relayNow('b', 'a');
+  $('autoStart').onclick = autoStart;
+  $('autoStop').onclick = () => autoStop('auto.stopped.manual');
   renderRelay();
+  renderAuto();
   $('hExportMd').onclick = () => exportSession('md');
   $('hExportJson').onclick = () => exportSession('json');
   $('hClear').onclick = () => { history = history.filter((e) => e.pin); renderHistory(); save(); };
