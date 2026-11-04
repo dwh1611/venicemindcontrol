@@ -81,7 +81,7 @@
     if (msg?.type !== 'inject') return;
 
     const input = findInput();
-    if (!input) { sendResponse({ ok: false, error: 'Keine Chatbox gefunden.' }); return; }
+    if (!input) { sendResponse({ ok: false, code: 'no_input', error: 'No chat box found.' }); return; }
     try {
       writeText(input, msg.text, msg.mode || 'replace');
     } catch (e) {

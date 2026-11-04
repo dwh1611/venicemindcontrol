@@ -1,0 +1,238 @@
+// Oberflächen-Texte des Side Panels. Standardsprache ist Englisch.
+// Neue Sprache: ein weiteres Objekt unter STRINGS anlegen (alle Schlüssel aus "en" übersetzen)
+// und in LANGS eintragen. Fehlende Schlüssel fallen automatisch auf Englisch zurück.
+(() => {
+  const LANGS = [['en', 'English'], ['de', 'Deutsch']];
+
+  const STRINGS = {
+    en: {
+      'lang.label': 'Language',
+      'profiles.summary': 'PROFILES (IMPORT / EXPORT)',
+      'profiles.import': 'IMPORT (.json)',
+      'profiles.template': 'TEMPLATE',
+      'profiles.promptDe': 'COPY PROFILE-GENERATOR PROMPT (DE)',
+      'profiles.promptEn': 'COPY PROFILE-GENERATOR PROMPT (EN)',
+      'profiles.hint': 'Custom profiles are plain data (JSON) and never run code. Format and guide: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (also in German).',
+      'profiles.onlyTitle': 'title only',
+      'profiles.custom': 'custom',
+      'profiles.export': 'Export as JSON',
+      'profiles.delete': 'Delete profile',
+      'profiles.deleted': 'Profile "{name}" deleted.',
+      'profiles.tooBig': 'File too large (max. 300 KB).',
+      'profiles.badJson': 'Not a valid JSON file: {msg}',
+      'profiles.notImported': 'Profile "{id}" not imported:',
+      'profiles.idTaken': 'id "{id}" is taken by a built-in profile.',
+      'profiles.replaced': '{name} (replaced)',
+      'profiles.imported': 'Imported: {names}',
+      'profiles.templateFile': 'template.profile.json',
+      'profiles.promptCopied': 'Prompt copied. Paste it into a normal chat, fill in "MY MIND" at the bottom, save the answer as .json and import it.',
+      'profiles.copyFailed': 'Could not copy: {msg}',
+
+      'clock.aria': 'Game time',
+      'clock.now': 'now',
+      'queue.cap': 'QUEUE',
+      'queue.empty': '(empty – click commands above)',
+      'queue.remove': 'Remove',
+      'user.label': 'Your own text (speech / action)',
+      'user.placeholder': 'What do you say or do?',
+      'preview.empty': '(nothing prepared)',
+      'send.btn': 'SEND',
+      'clear.btn': 'CLEAR',
+
+      'settings.summary': 'SETTINGS',
+      'settings.instant': 'send immediately on click',
+      'settings.append': 'append to existing text',
+      'settings.autosend': 'submit automatically',
+      'settings.order': 'Order',
+      'settings.order.eventFirst': 'Actions, then my text',
+      'settings.order.userFirst': 'My text, then actions',
+      'settings.actor': 'Prefix operator',
+      'settings.world': 'Prefix world',
+      'settings.advance': 'Clock after sending (+min)',
+      'settings.chat': 'CHAT APPEARANCE',
+      'settings.theme': 'Terminal theme in chat',
+      'settings.scan': 'Scanlines',
+      'settings.screens': 'Screens as display frames',
+      'settings.events': 'Format event lines',
+      'settings.sync': 'Take clock from the ⏱ line',
+      'settings.convention': 'INSERT CONVENTION TEXT',
+      'settings.conventionHint': 'Inserts, once, an explanation of the line formats and the ⏱ status line into the chat box.',
+      'settings.unassign': 'REMOVE MIND ASSIGNMENT',
+
+      'history.cap': 'HISTORY',
+      'history.hint': '(click = insert again)',
+
+      'status.noTab': 'No venice.ai tab found.',
+      'status.unknown': 'Unknown error.',
+      'status.noInput': 'No chat box found.',
+      'status.sent': 'Inserted and sent.',
+      'status.inserted': 'Inserted into the chat box.',
+      'status.connection': 'Connection to the tab failed: {msg}',
+      'status.nothing': 'Nothing to send.',
+      'status.inputMissing': 'Input missing.',
+
+      'mind.none': 'No Mind detected. Open a Mind chat on venice.ai.',
+      'mind.unknown': 'Unknown Mind {id}{title}. Which profile does it belong to?',
+      'mind.assign': 'ASSIGN',
+      'mind.detected': ' · detected via {source}',
+      'mind.src.assigned': 'manual assignment',
+      'mind.src.id': 'Mind ID',
+      'mind.src.title': 'page title',
+
+      'compose.kind': 'Type',
+      'compose.who': 'From',
+      'compose.text': 'Content',
+      'compose.add': '> ADD TO QUEUE',
+
+      'sc.none': 'This Mind has no scenarios.',
+      'sc.hint': 'Set up a mission. Place, time and weather are then fixed and nothing is reinvented later. Best in a new chat.',
+      'sc.cap': 'MISSIONS',
+      'sc.random': 'RANDOM',
+      'sc.empty': 'EMPTY',
+      'sc.details': 'MISSION DETAILS',
+      'sc.twistPh': 'Only sent if "Send suggestion" is selected above.',
+      'sc.complication': 'Complication',
+      'sc.comp.choose': 'Mind chooses (secret)',
+      'sc.comp.none': 'none',
+      'sc.comp.spoiler': 'Send suggestion (spoiler)',
+      'sc.intensity': 'Intensity',
+      'sc.lvl.light': 'light',
+      'sc.lvl.medium': 'medium',
+      'sc.lvl.hard': 'hard',
+      'sc.twistSummary': 'Suggested complication (spoiler)',
+      'sc.stage': '> MISSION TO QUEUE',
+      'sc.save': 'SAVE AS MY OWN',
+      'sc.delete': 'DELETE',
+      'sc.missing': '{names} missing.',
+      'sc.and': ' and ',
+      'sc.titleMissing': 'Title missing.',
+      'sc.saved': 'Custom scenario saved.',
+      'sc.deleted': 'Scenario deleted.',
+    },
+
+    de: {
+      'lang.label': 'Sprache',
+      'profiles.summary': 'PROFILE (IMPORTIEREN / EXPORTIEREN)',
+      'profiles.import': 'IMPORTIEREN (.json)',
+      'profiles.template': 'VORLAGE',
+      'profiles.promptDe': 'PROMPT FÜR PROFIL-GENERATOR KOPIEREN (DE)',
+      'profiles.promptEn': 'PROMPT FÜR PROFIL-GENERATOR KOPIEREN (EN)',
+      'profiles.hint': 'Eigene Profile sind reine Daten (JSON) und führen keinen Code aus. Format und Anleitung: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (auch auf Deutsch).',
+      'profiles.onlyTitle': 'nur Titel',
+      'profiles.custom': 'eigenes',
+      'profiles.export': 'Als JSON exportieren',
+      'profiles.delete': 'Profil löschen',
+      'profiles.deleted': 'Profil "{name}" gelöscht.',
+      'profiles.tooBig': 'Datei zu groß (max. 300 KB).',
+      'profiles.badJson': 'Keine gültige JSON-Datei: {msg}',
+      'profiles.notImported': 'Profil "{id}" nicht importiert:',
+      'profiles.idTaken': 'id "{id}" ist von einem eingebauten Profil belegt.',
+      'profiles.replaced': '{name} (ersetzt)',
+      'profiles.imported': 'Importiert: {names}',
+      'profiles.templateFile': 'vorlage.profile.json',
+      'profiles.promptCopied': 'Prompt kopiert. In einen normalen Chat einfügen, unten „MEIN MIND“ bzw. „MY MIND“ ausfüllen, Antwort als .json speichern und importieren.',
+      'profiles.copyFailed': 'Kopieren nicht möglich: {msg}',
+
+      'clock.aria': 'Spielzeit',
+      'clock.now': 'echt',
+      'queue.cap': 'WARTESCHLANGE',
+      'queue.empty': '(leer – Befehle oben anklicken)',
+      'queue.remove': 'Entfernen',
+      'user.label': 'Eigener Text (Rede / Handlung)',
+      'user.placeholder': 'Was sagst oder tust du?',
+      'preview.empty': '(nichts vorbereitet)',
+      'send.btn': 'SENDEN',
+      'clear.btn': 'LEEREN',
+
+      'settings.summary': 'EINSTELLUNGEN',
+      'settings.instant': 'sofort senden bei Klick',
+      'settings.append': 'an vorhandenen Text anhängen',
+      'settings.autosend': 'automatisch absenden',
+      'settings.order': 'Reihenfolge',
+      'settings.order.eventFirst': 'Aktionen, dann mein Text',
+      'settings.order.userFirst': 'Mein Text, dann Aktionen',
+      'settings.actor': 'Präfix Operator',
+      'settings.world': 'Präfix Welt',
+      'settings.advance': 'Uhr nach Senden (+min)',
+      'settings.chat': 'CHAT-DARSTELLUNG',
+      'settings.theme': 'Terminal-Theme im Chat',
+      'settings.scan': 'Scanlines',
+      'settings.screens': 'Screens als Display-Rahmen',
+      'settings.events': 'Event-Zeilen formatieren',
+      'settings.sync': 'Uhr aus der ⏱-Zeile übernehmen',
+      'settings.convention': 'KONVENTIONS-TEXT EINFÜGEN',
+      'settings.conventionHint': 'Fügt einmalig eine Erklärung der Zeilenformate und der ⏱-Statuszeile in die Chatbox ein.',
+      'settings.unassign': 'MIND-ZUORDNUNG ENTFERNEN',
+
+      'history.cap': 'VERLAUF',
+      'history.hint': '(Klick = erneut einfügen)',
+
+      'status.noTab': 'Kein venice.ai-Tab gefunden.',
+      'status.unknown': 'Unbekannter Fehler.',
+      'status.noInput': 'Keine Chatbox gefunden.',
+      'status.sent': 'Eingefügt und gesendet.',
+      'status.inserted': 'In die Chatbox eingefügt.',
+      'status.connection': 'Verbindung zum Tab fehlgeschlagen: {msg}',
+      'status.nothing': 'Nichts zu senden.',
+      'status.inputMissing': 'Eingabe fehlt.',
+
+      'mind.none': 'Kein Mind erkannt. Öffne einen Mind-Chat auf venice.ai.',
+      'mind.unknown': 'Unbekanntes Mind {id}{title}. Welches Profil gehört dazu?',
+      'mind.assign': 'ZUORDNEN',
+      'mind.detected': ' · erkannt über {source}',
+      'mind.src.assigned': 'Zuordnung',
+      'mind.src.id': 'Mind-ID',
+      'mind.src.title': 'Seitentitel',
+
+      'compose.kind': 'Art',
+      'compose.who': 'Von',
+      'compose.text': 'Inhalt',
+      'compose.add': '> IN WARTESCHLANGE',
+
+      'sc.none': 'Dieses Mind hat keine Szenarien.',
+      'sc.hint': 'Einen Einsatz festlegen. Ort, Zeit und Wetter stehen dann fest, nichts wird später neu erfunden. Am besten in einem neuen Chat.',
+      'sc.cap': 'EINSÄTZE',
+      'sc.random': 'ZUFÄLLIG',
+      'sc.empty': 'LEER',
+      'sc.details': 'EINSATZ-DETAILS',
+      'sc.twistPh': 'Wird nur gesendet, wenn oben „Vorschlag senden“ gewählt ist.',
+      'sc.complication': 'Komplikation',
+      'sc.comp.choose': 'Mind wählt (geheim)',
+      'sc.comp.none': 'keine',
+      'sc.comp.spoiler': 'Vorschlag senden (Spoiler)',
+      'sc.intensity': 'Härte',
+      'sc.lvl.light': 'leicht',
+      'sc.lvl.medium': 'mittel',
+      'sc.lvl.hard': 'hart',
+      'sc.twistSummary': 'Vorschlag für die Komplikation (Spoiler)',
+      'sc.stage': '> EINSATZ IN WARTESCHLANGE',
+      'sc.save': 'ALS EIGENES SPEICHERN',
+      'sc.delete': 'LÖSCHEN',
+      'sc.missing': '{names} fehlt.',
+      'sc.and': ' und ',
+      'sc.titleMissing': 'Titel fehlt.',
+      'sc.saved': 'Eigenes Szenario gespeichert.',
+      'sc.deleted': 'Szenario gelöscht.',
+    },
+  };
+
+  let lang = 'en';
+
+  const t = (key, params) => {
+    const tpl = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+    return params ? tpl.replace(/\{(\w+)\}/g, (_m, n) => (params[n] != null ? params[n] : '')) : tpl;
+  };
+
+  // Befüllt alle Elemente mit data-i18n (Text), data-i18n-ph (Platzhalter), data-i18n-title, data-i18n-aria.
+  const apply = (root = document) => {
+    root.querySelectorAll('[data-i18n]').forEach((e) => { e.textContent = t(e.dataset.i18n); });
+    root.querySelectorAll('[data-i18n-ph]').forEach((e) => { e.placeholder = t(e.dataset.i18nPh); });
+    root.querySelectorAll('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); });
+    root.querySelectorAll('[data-i18n-aria]').forEach((e) => { e.setAttribute('aria-label', t(e.dataset.i18nAria)); });
+    document.documentElement.lang = lang;
+  };
+
+  const setLang = (l) => { lang = STRINGS[l] ? l : 'en'; };
+
+  self.I18n = { LANGS, t, apply, setLang, get lang() { return lang; } };
+})();

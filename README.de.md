@@ -14,6 +14,7 @@ Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingal
 
 ## Inhalt
 - [Funktionen](#funktionen)
+- [Sprachen](#sprachen)
 - [Installation](#installation)
 - [Bedienung](#bedienung)
 - [Mind-Erkennung](#mind-erkennung)
@@ -35,7 +36,14 @@ Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingal
 - **HUD.** Liest die Statuszeile `⏱ HH:MM · 📍 Ort · …` aus der letzten Antwort und zeigt Ort, Werte und Anzeigen. Die Spielzeit wird übernommen.
 - **Chat-Optik.** Terminal-Theme, Scanlines, Event-Zeilen als farbige Balken und Display-Rahmen für ASCII-Blöcke, jeweils in den Farben des Profils.
 - **Szenarien.** Vorgefertigte Einsätze mit festem Ort, Datum, Wetter und Auftrag, wahlweise mit geheimer Komplikation (Nightingale).
+- **Mehrsprachige Oberfläche.** Standard ist Englisch, Deutsch ist enthalten. Umschalten mit der Sprachauswahl oben im Panel; Profile können eigene Übersetzungen mitbringen.
 - **Eigene Profile hochladen.** Import, Export, Löschen, Vorlage und ein Prompt, mit dem ein Chat-Modell ein Profil aus einer Mind-Beschreibung schreibt.
+
+## Sprachen
+Das Panel ist **standardmäßig Englisch**. Die Sprachauswahl oben schaltet zwischen Englisch und Deutsch um; die Wahl wird gespeichert und gilt für alle Minds. Die Beschriftungen in dieser Dokumentation (*ZUORDNEN*, *WARTESCHLANGE* …) entsprechen der deutschen Oberfläche.
+
+Die eingebauten Profile sind mit übersetzt (Reiter, Beschriftungen, Buttons und der Text, den die Buttons senden). **Nicht** übersetzt werden die Ereignis-Arten in den Zeilen (`QUERY`, `OPERATE`, `EINGRIFF`, …): sie sind das Protokoll zwischen Panel und Mind, damit bestehende Minds weiter funktionieren.
+Profile können mehrere Sprachen in einer Datei enthalten, siehe [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md#mehrsprachige-texte). Für eine weitere Oberflächensprache in `i18n.js` ein Objekt unter `STRINGS` und einen Eintrag in `LANGS` ergänzen; fehlende Schlüssel fallen auf Englisch zurück.
 
 ## Installation
 1. Repository herunterladen oder klonen.
@@ -135,7 +143,7 @@ Das Content-Script stylt den Chat des erkannten Minds (abschaltbar unter *Einste
 
 ## Sicherheit und Datenschutz
 - **Keine Netzwerkzugriffe.** Die Erweiterung sendet nichts an Dritte, alles bleibt im Browser (`chrome.storage.local`).
-- **Berechtigungen:** `sidePanel` (Panel), `storage` (Speicher), `tabs` (URL und Titel des Venice-Tabs lesen, Nachrichten senden), `scripting` (Content-Script nachladen) und Zugriff auf `venice.ai`.
+- **Berechtigungen:** `sidePanel` (Panel), `storage` (Speicher), `scripting` (Content-Script nachladen) und Zugriff auf `venice.ai` (das erlaubt auch, URL und Titel des Venice-Tabs zu lesen und Nachrichten dorthin zu senden). Keine `tabs`-Berechtigung.
 - **Kein fremder Code.** Importierte Profile sind JSON. Ihre Inhalte werden per `textContent` eingesetzt (`innerHTML` dient nur zum Leeren von Listen), es gibt kein `eval`. Farben, Namen und reguläre Ausdrücke werden vor dem Speichern geprüft.
 - Die Erweiterung liest den Chat nur, um die `⏱`-Statuszeile und die Event-Zeilen auszuwerten.
 
@@ -169,6 +177,7 @@ manifest.json                 Chrome-Manifest (MV3)
 background.js                 öffnet das Panel
 content.js                    Läuft auf venice.ai: Eingabe, Styling, Statuszeile
 sidepanel.html / .css / .js   Panel
+i18n.js                       Oberflächentexte (Standard Englisch, Deutsch)
 profiles/registry.js          Erkennung, Prüfung, Platzhalter
 profiles/nightingale.js       eingebautes Profil
 profiles/ghostline.js         eingebautes Profil

@@ -17,6 +17,7 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 
 ## Contents
 - [Features](#features)
+- [Languages](#languages)
 - [Installation](#installation)
 - [Using the panel](#using-the-panel)
 - [Mind detection](#mind-detection)
@@ -38,7 +39,14 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **HUD.** Reads the status line `⏱ HH:MM · 📍 place · ...` from the last reply and shows place, values and meters. The in-world clock is taken over.
 - **Chat appearance.** Terminal theme, scanlines, event lines as coloured bars and display frames for ASCII blocks, in the colours of the profile.
 - **Scenarios.** Predefined missions with fixed place, date, weather and goal, optionally with a secret complication (Nightingale).
+- **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
 - **Upload your own profiles.** Import, export, delete, template, and a prompt with which a chat model writes a profile from a description of your mind.
+
+## Languages
+The panel is **English by default**. The language selector at the top switches between English and German; the choice is stored and applies to all minds.
+
+Built-in profiles are translated as well (tab names, labels, buttons and the text those buttons send). What is *not* translated are the event kinds in the lines (`QUERY`, `OPERATE`, `EINGRIFF`, …): they are the protocol between panel and mind, so existing minds keep working.
+Profiles can contain several languages in one file, see [PROFILE-FORMAT.md](PROFILE-FORMAT.md#multilingual-texts). To add another interface language, add an object to `STRINGS` in `i18n.js` and an entry to `LANGS`; missing keys fall back to English.
 
 ## Installation
 1. Download or clone the repository.
@@ -54,16 +62,16 @@ From top to bottom the panel consists of:
 
 | Area | Purpose |
 |---|---|
-| **Mind bar** | Shows the detected mind and how it was detected. For an unknown mind a profile selector with *ZUORDNEN* (assign) appears. |
-| **PROFILE** (profiles) | Import, export, delete, template, generator prompt (see [Your own profiles](#your-own-profiles)). |
-| **Header, clock, time buttons** | Logo, in-world time (editable), `+1 / +5 / +30 / +1h` and `echt` (real) for the system time. Profiles without in-world time hide this. |
+| **Mind bar** | Shows the detected mind and how it was detected. For an unknown mind a profile selector with *ASSIGN* appears. |
+| **PROFILES** | Import, export, delete, template, generator prompt (see [Your own profiles](#your-own-profiles)). |
+| **Header, clock, time buttons** | Logo, in-world time (editable), `+1 / +5 / +30 / +1h` and `now` for the system time. Profiles without in-world time hide this. |
 | **HUD** | State from the last reply of the mind. |
 | **Tabs** | The commands of the profile. Each click puts one line into the queue. |
-| **WARTESCHLANGE** (queue) | Check lines, remove single ones, add your own text, preview, *SENDEN* (send) or *LEEREN* (clear). |
-| **EINSTELLUNGEN** (settings) | Send immediately, append or replace, auto-send, order, prefixes, clock advance, chat appearance, convention text. |
-| **VERLAUF** (history) | The last 30 sent texts. One click inserts them again. |
+| **QUEUE** | Check lines, remove single ones, add your own text, preview, *SEND* or *CLEAR*. |
+| **SETTINGS** | Send immediately, append or replace, auto-send, order, prefixes, clock advance, chat appearance, convention text. |
+| **HISTORY** | The last 30 sent texts. One click inserts them again. |
 
-**KONVENTIONS-TEXT EINFÜGEN** (insert convention text, in the settings) writes an explanation of the line formats into the chatbox. Useful if the mind does not
+**INSERT CONVENTION TEXT** (in the settings) writes an explanation of the line formats into the chatbox. Useful if the mind does not
 know the format from its prompt yet. It is better to copy the explanation into the mind's prompt.
 
 ## Mind detection
@@ -109,7 +117,7 @@ All documents exist in English and German:
 | Generator prompt | [PROMPT-Profile-Generator.md](PROMPT-Profile-Generator.md) | [PROMPT-Profile-Generator.de.md](PROMPT-Profile-Generator.de.md) |
 
 ## Chat appearance
-The content script styles the chat of the detected mind (can be switched off under *EINSTELLUNGEN → CHAT-DARSTELLUNG*, settings → chat appearance):
+The content script styles the chat of the detected mind (can be switched off under *SETTINGS → CHAT APPEARANCE*):
 - **Terminal theme** and **scanlines** in the colours of the profile.
 - **Event lines.** Lines such as `[PREFIX · HH:MM · KIND · ...] text` in your messages become coloured bars. The colour is set by `eventKinds` in the profile. Only prefixes in capital letters are recognised.
 - **Screens.** Code blocks that start with `┌` or `╔` or contain `│` get a display frame.
@@ -139,7 +147,7 @@ The content script styles the chat of the detected mind (can be switched off und
 
 ## Security and privacy
 - **No network access.** The extension sends nothing to third parties; everything stays in the browser (`chrome.storage.local`).
-- **Permissions:** `sidePanel` (panel), `storage` (storage), `tabs` (read URL and title of the Venice tab, send messages), `scripting` (reload the content script) and access to `venice.ai`.
+- **Permissions:** `sidePanel` (panel), `storage` (storage), `scripting` (reload the content script) and access to `venice.ai` (which also allows reading URL and title of the Venice tab and sending messages to it). No `tabs` permission.
 - **No foreign code.** Imported profiles are JSON. Their contents are inserted via `textContent` (`innerHTML` is only used to empty lists), and there is no `eval`. Colours, names and regular expressions are checked before saving.
 - The extension reads the chat only to evaluate the `⏱` status line and the event lines.
 
@@ -164,7 +172,7 @@ The content script styles the chat of the detected mind (can be switched off und
 | "Keine Chatbox gefunden" (no chatbox found) | The mind chat is not open, or Venice changed the chatbox (see selectors). |
 | Panel shows "Unbekanntes Mind" (unknown mind) | No profile matches. Assign or import a profile. The mind ID is in the URL. |
 | HUD stays empty | The mind does not end its reply with the status line. Insert the convention text or copy it into the mind's prompt. |
-| Bars do not appear | The prefix in the settings is not in capital letters, or *Event-Zeilen formatieren* (format event lines) is off. |
+| Bars do not appear | The prefix in the settings is not in capital letters, or *Format event lines* is off. |
 | Import reports errors | The message names the field. A chat model can correct it with the generator prompt. |
 
 ## Project structure
@@ -173,6 +181,7 @@ manifest.json                 Chrome manifest (MV3)
 background.js                 opens the panel
 content.js                    runs on venice.ai: input, styling, status line
 sidepanel.html / .css / .js   panel
+i18n.js                       interface texts (English default, German)
 profiles/registry.js          detection, validation, placeholders
 profiles/nightingale.js       built-in profile
 profiles/ghostline.js         built-in profile

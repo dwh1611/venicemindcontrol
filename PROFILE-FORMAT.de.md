@@ -97,6 +97,19 @@ Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Fel
 Jedes Szenario ist ein Objekt mit den `key`s aus `fields`. `{level}` ist die Härte (`light`, `medium`, `hard`),
 `{twist}` der Vorschlag aus dem Feld `twist` des Szenarios. Das Panel sendet `[WELT · HH:MM · SCENARIO · Titel] …`.
 
+## Mehrsprachige Texte
+Jeder Textwert in einem Profil darf statt eines Strings ein Objekt sein:
+
+```json
+"label": { "en": "Target", "de": "Ziel" }
+```
+
+- `en` ist Pflicht und Rückfall, falls die gewählte Sprache fehlt. Weitere Schlüssel sind zweistellige Sprachcodes (`de`, `fr`, …).
+- Das Panel löst diese Objekte für seine Oberflächensprache auf. Das gilt für Reiter-Namen, Hinweise, Feld-Beschriftungen und Platzhalter, Überschriften und Einträge von Grids (der gesendete Text folgt der Oberflächensprache), Compose-Beschriftungen, `settingsLabels`, `header.meta`, Szenario-Titel und -Felder sowie `convention`.
+- Ein einfacher String ist überall gültig und wird in jeder Sprache angezeigt.
+- Die Ereignis-Arten (`parts`, Schlüssel in `eventKinds`, Schlüssel in `kinds`) und `prefixes` **nicht** übersetzen: sie sind das Protokoll, das dein Mind-Prompt kennt. Um für eine `compose`-Art einen anderen Namen anzuzeigen, `"label": { "en": "...", "de": "..." }` an der Art ergänzen; gesendet wird weiter der ursprüngliche Schlüssel.
+- Beim Export bleiben alle Sprachen erhalten.
+
 ## Sicherheit
 - Importierte Dateien werden geprüft (Farben, Namen, reguläre Ausdrücke, Aufbau) und nur als Text angezeigt.
 - Es gibt kein `eval`, keinen Nachladen von Skripten und keine Netzwerkzugriffe aus Profilen.
