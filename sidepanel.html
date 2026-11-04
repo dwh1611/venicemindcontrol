@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Mind Console</title>
@@ -9,22 +9,28 @@
   <div class="crt" aria-hidden="true"></div>
 
   <main class="term">
+    <div class="langbar">
+      <label class="inline"><span class="k" data-i18n="lang.label">Language</span>
+        <select id="lang" aria-label="Language"></select>
+      </label>
+    </div>
+
     <section class="mindbar" id="mindbar"></section>
 
     <details class="settings" id="profileMgr">
-      <summary>PROFILE (IMPORTIEREN / EXPORTIEREN)</summary>
+      <summary data-i18n="profiles.summary">PROFILES (IMPORT / EXPORT)</summary>
       <ul id="plist"></ul>
       <div class="row">
-        <button id="pimport">IMPORTIEREN (.json)</button>
-        <button id="ptemplate">VORLAGE</button>
+        <button id="pimport" data-i18n="profiles.import">IMPORT (.json)</button>
+        <button id="ptemplate" data-i18n="profiles.template">TEMPLATE</button>
       </div>
       <div class="row">
-        <button id="pprompt">PROMPT FÜR PROFIL-GENERATOR KOPIEREN (DE)</button>
-        <button id="pprompt_en">PROMPT FÜR PROFIL-GENERATOR KOPIEREN (EN)</button>
+        <button id="pprompt" data-i18n="profiles.promptDe">COPY PROFILE-GENERATOR PROMPT (DE)</button>
+        <button id="pprompt_en" data-i18n="profiles.promptEn">COPY PROFILE-GENERATOR PROMPT (EN)</button>
       </div>
       <input type="file" id="pfile" accept=".json,application/json" hidden />
       <div class="status" id="pmsg"></div>
-      <p class="hint">Eigene Profile sind reine Daten (JSON) und führen keinen Code aus. Format und Anleitung: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (auch auf Deutsch).</p>
+      <p class="hint" data-i18n="profiles.hint">Custom profiles are plain data (JSON) and never run code. Format and guide: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (also in German).</p>
     </details>
 
     <div id="app" hidden>
@@ -35,7 +41,7 @@
 
       <section class="statusbar">
         <span class="k">T</span>
-        <input id="time" value="12:00" maxlength="5" aria-label="Spielzeit" />
+        <input id="time" value="12:00" maxlength="5" data-i18n-aria="clock.aria" aria-label="Game time" />
         <span class="grow"></span>
         <span class="bat" id="statusRight"></span>
       </section>
@@ -44,7 +50,7 @@
         <button data-add="5">+5</button>
         <button data-add="30">+30</button>
         <button data-add="60">+1h</button>
-        <button id="now">echt</button>
+        <button id="now" data-i18n="clock.now">now</button>
       </div>
 
       <div class="hud" id="hud" hidden></div>
@@ -53,48 +59,48 @@
       <div id="panels"></div>
 
       <section class="queue">
-        <div class="cap">WARTESCHLANGE <span id="qcount">0</span></div>
+        <div class="cap"><span data-i18n="queue.cap">QUEUE</span> <span id="qcount">0</span></div>
         <ul id="queue"></ul>
-        <label>Eigener Text (Rede / Handlung)
-          <textarea id="userText" rows="3" placeholder="Was sagst oder tust du?"></textarea>
+        <label><span data-i18n="user.label">Your own text (speech / action)</span>
+          <textarea id="userText" rows="3" data-i18n-ph="user.placeholder" placeholder="What do you say or do?"></textarea>
         </label>
         <div class="preview" id="preview"></div>
         <div class="row">
-          <button class="primary" id="send">&gt; SENDEN <span class="key">Ctrl+⏎</span></button>
-          <button id="clearQueue">LEEREN</button>
+          <button class="primary" id="send">&gt; <span data-i18n="send.btn">SEND</span> <span class="key">Ctrl+⏎</span></button>
+          <button id="clearQueue" data-i18n="clear.btn">CLEAR</button>
         </div>
         <div class="status" id="status"></div>
       </section>
 
       <details class="settings">
-        <summary>EINSTELLUNGEN</summary>
-        <label class="inline"><input type="checkbox" id="instant" /> sofort senden bei Klick</label>
-        <label class="inline"><input type="checkbox" id="append" checked /> an vorhandenen Text anhängen</label>
-        <label class="inline"><input type="checkbox" id="autosend" /> automatisch absenden</label>
-        <label>Reihenfolge
+        <summary data-i18n="settings.summary">SETTINGS</summary>
+        <label class="inline"><input type="checkbox" id="instant" /> <span data-i18n="settings.instant">send immediately on click</span></label>
+        <label class="inline"><input type="checkbox" id="append" checked /> <span data-i18n="settings.append">append to existing text</span></label>
+        <label class="inline"><input type="checkbox" id="autosend" /> <span data-i18n="settings.autosend">submit automatically</span></label>
+        <label><span data-i18n="settings.order">Order</span>
           <select id="order">
-            <option value="eventFirst">Aktionen, dann mein Text</option>
-            <option value="userFirst">Mein Text, dann Aktionen</option>
+            <option value="eventFirst" data-i18n="settings.order.eventFirst">Actions, then my text</option>
+            <option value="userFirst" data-i18n="settings.order.userFirst">My text, then actions</option>
           </select>
         </label>
         <div class="cols">
-          <label><span id="lblActor">Präfix Operator</span><input id="hprefix" /></label>
-          <label><span id="lblWorld">Präfix Welt</span><input id="wprefix" /></label>
+          <label><span id="lblActor">Prefix operator</span><input id="hprefix" /></label>
+          <label><span id="lblWorld">Prefix world</span><input id="wprefix" /></label>
         </div>
-        <label>Uhr nach Senden (+min)<input id="advance" type="number" min="0" max="120" value="1" /></label>
-        <div class="cap">CHAT-DARSTELLUNG</div>
-        <label class="inline"><input type="checkbox" id="thTheme" checked /> Terminal-Theme im Chat</label>
-        <label class="inline"><input type="checkbox" id="thScan" checked /> Scanlines</label>
-        <label class="inline"><input type="checkbox" id="thScreens" checked /> Screens als Display-Rahmen</label>
-        <label class="inline"><input type="checkbox" id="thEvents" checked /> Event-Zeilen formatieren</label>
-        <label class="inline"><input type="checkbox" id="thSync" checked /> Uhr aus der ⏱-Zeile übernehmen</label>
-        <button id="convention">KONVENTIONS-TEXT EINFÜGEN</button>
-        <p class="hint">Fügt einmalig eine Erklärung der Zeilenformate und der ⏱-Statuszeile in die Chatbox ein.</p>
-        <button id="unassign">MIND-ZUORDNUNG ENTFERNEN</button>
+        <label><span data-i18n="settings.advance">Clock after sending (+min)</span><input id="advance" type="number" min="0" max="120" value="1" /></label>
+        <div class="cap" data-i18n="settings.chat">CHAT APPEARANCE</div>
+        <label class="inline"><input type="checkbox" id="thTheme" checked /> <span data-i18n="settings.theme">Terminal theme in chat</span></label>
+        <label class="inline"><input type="checkbox" id="thScan" checked /> <span data-i18n="settings.scan">Scanlines</span></label>
+        <label class="inline"><input type="checkbox" id="thScreens" checked /> <span data-i18n="settings.screens">Screens as display frames</span></label>
+        <label class="inline"><input type="checkbox" id="thEvents" checked /> <span data-i18n="settings.events">Format event lines</span></label>
+        <label class="inline"><input type="checkbox" id="thSync" checked /> <span data-i18n="settings.sync">Take clock from the ⏱ line</span></label>
+        <button id="convention" data-i18n="settings.convention">INSERT CONVENTION TEXT</button>
+        <p class="hint" data-i18n="settings.conventionHint">Inserts, once, an explanation of the line formats and the ⏱ status line into the chat box.</p>
+        <button id="unassign" data-i18n="settings.unassign">REMOVE MIND ASSIGNMENT</button>
       </details>
 
       <section class="log">
-        <div class="cap">VERLAUF <span class="hintinline">(Klick = erneut einfügen)</span></div>
+        <div class="cap"><span data-i18n="history.cap">HISTORY</span> <span class="hintinline" data-i18n="history.hint">(click = insert again)</span></div>
         <ul id="history"></ul>
       </section>
 
@@ -102,6 +108,7 @@
     </div>
   </main>
 
+  <script src="i18n.js"></script>
   <script src="profiles/registry.js"></script>
   <script src="profiles/nightingale.js"></script>
   <script src="profiles/ghostline.js"></script>

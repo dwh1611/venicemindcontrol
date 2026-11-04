@@ -100,6 +100,19 @@ Each scenario is an object with the `key`s from `fields`. `{level}` is the inten
 `{twist}` the suggestion from the scenario's `twist` field. Values have no final full stop, because the template adds it.
 The panel sends `[WORLD · HH:MM · SCENARIO · Title] ...`. Show the list with a tab that contains `{"type":"scenarios"}`.
 
+## Multilingual texts
+Any text value in a profile may be an object instead of a string:
+
+```json
+"label": { "en": "Target", "de": "Ziel" }
+```
+
+- `en` is required and is the fallback if the selected language is missing. Other keys are two-letter language codes (`de`, `fr`, …).
+- The panel resolves these objects for its interface language before use. This works for tab labels, hints, field labels and placeholders, grid captions and items (the sent text follows the interface language), compose labels, `settingsLabels`, `header.meta`, scenario titles and fields, and `convention`.
+- A plain string is valid everywhere and is shown in every language.
+- Do **not** translate the event kinds (`parts`, `eventKinds` keys, the keys of `kinds`) or `prefixes`: they are the protocol your mind prompt knows. To show another name for a `compose` kind, add `"label": { "en": "...", "de": "..." }` to that kind; the original key is still what is sent.
+- Exporting a profile keeps all languages.
+
 ## Safety
 - Imported files are checked (colours, names, regular expressions, structure) and only inserted as text.
 - There is no `eval`, no loading of scripts and no network access from profiles.

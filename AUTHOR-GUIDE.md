@@ -209,7 +209,7 @@ Teach the panel to read it:
 "convention": "Lines in square brackets starting with \"{hp}\" are the guest's actions: ORDER = ..., TALK = ..., WAIT = ... Lines starting with \"{wp}\" are things that happen in the café and do not come from the guest: NOISE = ..., STAFF = ... The time in each line is the current in-world time and never runs backwards. Free text below the lines is the guest speaking or acting. End every reply with one status line in this exact form: ⏱ HH:MM · 📍 table · 12 € · Mood 3/5"
 ```
 The convention is a text for the mind (so write it in the mind's language). `{hp}` and `{wp}` become your two prefixes.
-The panel inserts it into the chatbox with *EINSTELLUNGEN → KONVENTIONS-TEXT EINFÜGEN* (settings → insert convention text). Better: copy it into the mind's system prompt (step 4).
+The panel inserts it into the chatbox with *SETTINGS → INSERT CONVENTION TEXT*. Better: copy it into the mind's system prompt (step 4).
 
 ### 3.10 The complete file
 ```json
@@ -499,7 +499,7 @@ Two details decide whether the HUD works:
 - If you change a spelling in the profile (for example `Mood` to `Stimmung`), change it in the prompt too.
 
 ## 6. Step 5: import and test
-1. Open the panel (extension icon) and expand **PROFILE** (profiles).
+1. Open the panel (extension icon) and expand **PROFILES**.
 2. Click **IMPORTIEREN (.json)** (import) and choose your file. On success the panel shows `Importiert: Café Regular`; the profile appears in the list marked "eigenes" (own).
 3. Open the mind chat. The mind bar at the top of the panel shows the profile and how it was recognised (by mind ID or title).
 
@@ -516,13 +516,22 @@ If the import fails, the message names the field. The panel shows the messages i
 | `id "ghostline" is taken by a built-in profile` | Choose another id. |
 
 **Manual test, five minutes:**
-1. Click one button of every tab and check the queue lines (*WARTESCHLANGE*, the queue) against your plan.
+1. Click one button of every tab and check the queue lines (*QUEUE*) against your plan.
 2. Send. Does the mind answer in character and end with the status line?
 3. Does the HUD show place, values and meters? Does the clock move?
 4. Leave a required field empty. Do you get your `msg`?
 5. Switch to another mind tab and back. Does the panel switch profiles?
 
 ## 7. Recipes
+### 7.0 Several languages in one profile
+Any text can be given in several languages. Write an object with an `en` entry (required, it is the fallback) instead of a string:
+
+```json
+{ "id": "order", "label": { "en": "ORDER", "de": "BESTELLEN" }, "blocks": [] }
+```
+
+The panel shows the text in the selected interface language. This also works for button texts: the sent text follows the interface language. Keep the *event kinds* (the first `parts`, e.g. `"ORDER"`) as plain strings, because your mind prompt refers to them. Details: [PROFILE-FORMAT.md](PROFILE-FORMAT.md#multilingual-texts).
+
 ### 7.1 Optional parameter
 Use a field plus a segment that depends on it. When the field is empty the segment disappears:
 `"body": ["{item}", "- {field.target}"]`
@@ -585,11 +594,11 @@ A body segment may contain `\n`: `"body": ["\n{field.history}\n/end"]`.
 ## 10. Troubleshooting
 | Problem | Cause and fix |
 |---|---|
-| Panel says "Unknown mind" | The ID or title does not match. Use *ZUORDNEN* (assign) in the panel, or correct `mindIds`. |
-| The panel shows the wrong profile | Another profile claims the same ID or title. Remove the manual assignment (*MIND-ZUORDNUNG ENTFERNEN* in the settings), or fix `titleMatch`. |
+| Panel says "Unknown mind" | The ID or title does not match. Use *ASSIGN* in the panel, or correct `mindIds`. |
+| The panel shows the wrong profile | Another profile claims the same ID or title. Remove the manual assignment (*REMOVE MIND ASSIGNMENT* in the settings), or fix `titleMatch`. |
 | Buttons produce nothing | A `requires` is not met. The panel shows the `msg` under the queue. |
 | Line looks different than expected | An empty placeholder drops its segment. Check `parts`/`body` and field ids. |
-| Bars do not appear in the chat | The prefix is not in capital letters, or the kind has no colour (then it uses `fg`), or *Event-Zeilen formatieren* (format event lines) is switched off in the settings. |
+| Bars do not appear in the chat | The prefix is not in capital letters, or the kind has no colour (then it uses `fg`), or *Format event lines* is switched off in the settings. |
 | HUD stays empty | The mind did not write the status line, or its spelling does not match your regular expression. |
 | Clock does not follow the mind | The status line does not start with `⏱ HH:MM`. |
 | Empty speech bubbles | Another extension edits the same page. Switch it off. |

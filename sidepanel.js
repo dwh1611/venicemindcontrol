@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const t = (k, p) => I18n.t(k, p);
 const h = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -88,11 +89,11 @@ function renderQueue() {
   const ul = $('queue');
   ul.innerHTML = '';
   $('qcount').textContent = String(queue.length);
-  if (!queue.length) ul.appendChild(h('li', 'empty', '(leer – Befehle oben anklicken)'));
+  if (!queue.length) ul.appendChild(h('li', 'empty', t('queue.empty')));
   queue.forEach((q, i) => {
     const li = h('li');
     const x = h('button', null, '×');
-    x.title = 'Entfernen';
+    x.title = t('queue.remove');
     x.onclick = () => { queue.splice(i, 1); renderQueue(); save(); };
     li.append(h('span', null, q), x);
     ul.appendChild(li);
@@ -108,7 +109,7 @@ function buildMessage() {
   return $('order').value === 'userFirst' ? `${user}\n\n${ev}` : `${ev}\n\n${user}`;
 }
 
-function renderPreview() { $('preview').textContent = buildMessage() || '(nichts vorbereitet)'; }
+function renderPreview() { $('preview').textContent = buildMessage() || t('preview.empty'); }
 
 function renderHistory() {
   const ul = $('history');
@@ -151,23 +152,23 @@ function status(msg, ok = true) {
 async function inject(text, { send: doSend, append }) {
   try {
     const tab = await findVeniceTab();
-    if (!tab) { status('Kein venice.ai-Tab gefunden.', false); return false; }
+    if (!tab) { status(t('status.noTab'), false); return false; }
     await ensureContentScript(tab.id);
     const res = await chrome.tabs.sendMessage(tab.id, {
       type: 'inject', text, mode: append ? 'append' : 'replace', send: doSend,
     });
-    if (!res?.ok) { status(res?.error || 'Unbekannter Fehler.', false); return false; }
-    status(res.sent ? 'Eingefügt und gesendet.' : 'In die Chatbox eingefügt.');
+    if (!res?.ok) { status(res?.code === 'no_input' ? t('status.noInput') : res?.error || t('status.unknown'), false); return false; }
+    status(res.sent ? t('status.sent') : t('status.inserted'));
     return true;
   } catch (e) {
-    status('Verbindung zum Tab fehlgeschlagen: ' + e.message, false);
+    status(t('status.connection', { msg: e.message }), false);
     return false;
   }
 }
 
 async function send() {
   const text = buildMessage();
-  if (!text) { status('Nichts zu senden.', false); return; }
+  if (!text) { status(t('status.nothing'), false); return; }
   const ok = await inject(text, { send: $('autosend').checked || $('instant').checked, append: $('append').checked });
   if (!ok) return;
   history.unshift({ text, at: Date.now() });
@@ -188,8 +189,8 @@ async function send() {
 function runAction(a, scope) {
   const P = MindProfiles;
   const empty = (path) => P.fill(`{${path}}`, scope).empty;
-  for (const r of a.requires || []) if (empty(r.need)) return status(r.msg || 'Eingabe fehlt.', false);
-  if (a.requiresAny && a.requiresAny.need.every(empty)) return status(a.requiresAny.msg || 'Eingabe fehlt.', false);
+  for (const r of a.requires || []) if (empty(r.need)) return status(r.msg || t('status.inputMissing'), false);
+  if (a.requiresAny && a.requiresAny.need.every(empty)) return status(a.requiresAny.msg || t('status.inputMissing'), false);
   if ((a.omitKinds || []).includes(scope.kind)) scope.kind = '';
   let minutes = 0;
   if (a.shift && scope.item) {
@@ -273,22 +274,22 @@ function renderCompose(tab, b) {
   const names = Object.keys(b.kinds);
   const cols = h('div', 'cols');
   const kindLabel = h('label');
-  kindLabel.append(document.createTextNode(b.kindLabel || 'Art'));
+  kindLabel.append(document.createTextNode(b.kindLabel || t('compose.kind')));
   const sel = h('select');
-  names.forEach((n) => sel.appendChild(h('option', null, n)));
+  names.forEach((n) => { const o = h('option', null, b.kinds[n].label || n); o.value = n; sel.appendChild(o); });
   kindLabel.appendChild(sel);
   const whoLabel = h('label');
-  whoLabel.append(document.createTextNode(b.whoLabel || 'Von'));
+  whoLabel.append(document.createTextNode(b.whoLabel || t('compose.who')));
   const who = h('input');
   whoLabel.appendChild(who);
   cols.append(kindLabel, whoLabel);
   const textLabel = h('label');
-  textLabel.append(document.createTextNode(b.textLabel || 'Inhalt'));
+  textLabel.append(document.createTextNode(b.textLabel || t('compose.text')));
   const text = h('textarea');
   text.rows = 3;
   textLabel.appendChild(text);
   const quick = h('div', 'quick');
-  const add = h('button', 'stage', '> IN WARTESCHLANGE');
+  const add = h('button', 'stage', t('compose.add'));
 
   const refresh = () => {
     const k = b.kinds[sel.value];
@@ -312,21 +313,21 @@ function renderCompose(tab, b) {
 function renderScenarios(tab) {
   const cfg = profile.scenarios;
   const el = tab.panel;
-  if (!cfg) { el.appendChild(h('p', 'hint', 'Dieses Mind hat keine Szenarien.')); return; }
+  if (!cfg) { el.appendChild(h('p', 'hint', t('sc.none'))); return; }
   let current = null;
   const inputs = {};
   const all = () => [...cfg.items, ...customScenarios];
 
-  el.appendChild(h('p', 'hint', 'Einen Einsatz festlegen. Ort, Zeit und Wetter stehen dann fest, nichts wird später neu erfunden. Am besten in einem neuen Chat.'));
-  el.appendChild(h('div', 'cap', 'EINSÄTZE'));
+  el.appendChild(h('p', 'hint', t('sc.hint')));
+  el.appendChild(h('div', 'cap', t('sc.cap')));
   const list = h('div', 'grid');
   el.appendChild(list);
   const rowBtns = h('div', 'row');
-  const rnd = h('button', null, 'ZUFÄLLIG');
-  const empty = h('button', null, 'LEER');
+  const rnd = h('button', null, t('sc.random'));
+  const empty = h('button', null, t('sc.empty'));
   rowBtns.append(rnd, empty);
   el.appendChild(rowBtns);
-  el.appendChild(h('div', 'cap', 'EINSATZ-DETAILS'));
+  el.appendChild(h('div', 'cap', t('sc.details')));
 
   const form = h('div', 'scform');
   let pair = null;
@@ -351,27 +352,27 @@ function renderScenarios(tab) {
   let mode, level;
   const twistText = h('textarea');
   twistText.rows = 2;
-  twistText.placeholder = 'Wird nur gesendet, wenn oben Vorschlag senden gewählt ist.';
+  twistText.placeholder = t('sc.twistPh');
   if (cfg.twist) {
     const cols = h('div', 'cols');
-    const l1 = h('label'); l1.append(document.createTextNode('Komplikation'));
+    const l1 = h('label'); l1.append(document.createTextNode(t('sc.complication')));
     mode = h('select');
-    [['choose', 'Mind wählt (geheim)'], ['none', 'keine'], ['spoiler', 'Vorschlag senden (Spoiler)']].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; mode.appendChild(o); });
+    [['choose', t('sc.comp.choose')], ['none', t('sc.comp.none')], ['spoiler', t('sc.comp.spoiler')]].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; mode.appendChild(o); });
     l1.appendChild(mode);
-    const l2 = h('label'); l2.append(document.createTextNode('Härte'));
+    const l2 = h('label'); l2.append(document.createTextNode(t('sc.intensity')));
     level = h('select');
-    [['light', 'leicht'], ['medium', 'mittel'], ['hard', 'hart']].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; level.appendChild(o); });
+    [['light', t('sc.lvl.light')], ['medium', t('sc.lvl.medium')], ['hard', t('sc.lvl.hard')]].forEach(([v, t]) => { const o = h('option', null, t); o.value = v; level.appendChild(o); });
     level.value = 'medium';
     l2.appendChild(level);
     cols.append(l1, l2);
     const det = h('details');
-    det.append(h('summary', null, 'Vorschlag für die Komplikation (Spoiler)'), twistText);
+    det.append(h('summary', null, t('sc.twistSummary')), twistText);
     el.append(cols, det);
   }
 
-  const stageBtn = h('button', 'stage', '> EINSATZ IN WARTESCHLANGE');
-  const saveBtn = h('button', null, 'ALS EIGENES SPEICHERN');
-  const delBtn = h('button', null, 'LÖSCHEN');
+  const stageBtn = h('button', 'stage', t('sc.stage'));
+  const saveBtn = h('button', null, t('sc.save'));
+  const delBtn = h('button', null, t('sc.delete'));
   delBtn.hidden = true;
   const row1 = h('div', 'row'); row1.appendChild(stageBtn);
   const row2 = h('div', 'row'); row2.append(saveBtn, delBtn);
@@ -408,7 +409,7 @@ function renderScenarios(tab) {
   stageBtn.onclick = () => {
     const sc = read();
     const missing = cfg.fields.filter((f) => f.required && !sc[f.key]);
-    if (missing.length) return status(`${missing.map((f) => f.label).join(' und ')} fehlt.`, false);
+    if (missing.length) return status(t('sc.missing', { names: missing.map((f) => f.label).join(t('sc.and')) }), false);
     if (/^\d{1,2}:\d{2}$/.test(sc.time || '')) $('time').value = sc.time;
     const t = cfg.template;
     const m = mode ? mode.value : 'choose';
@@ -420,7 +421,7 @@ function renderScenarios(tab) {
   };
   saveBtn.onclick = () => {
     const sc = read();
-    if (!sc.title) return status('Titel fehlt.', false);
+    if (!sc.title) return status(t('sc.titleMissing'), false);
     sc.custom = true;
     sc.id = 'custom-' + sc.title.toLowerCase().replace(/\W+/g, '-');
     customScenarios = customScenarios.filter((c) => c.id !== sc.id);
@@ -428,7 +429,7 @@ function renderScenarios(tab) {
     save();
     renderList();
     fill(sc);
-    status('Eigenes Szenario gespeichert.');
+    status(t('sc.saved'));
   };
   delBtn.onclick = () => {
     if (!current || !current.custom) return;
@@ -436,7 +437,7 @@ function renderScenarios(tab) {
     save();
     renderList();
     fill(null);
-    status('Szenario gelöscht.');
+    status(t('sc.deleted'));
   };
   renderList();
   fill(cfg.items[0]);
@@ -473,8 +474,8 @@ function renderHeader() {
   clearInterval(telemetryTimer);
   if (latEls.length) telemetryTimer = setInterval(() => { latEls.forEach((s) => { s.textContent = String(24 + Math.floor(Math.random() * 60)); }); }, 2500);
   $('promptLine').textContent = hd.prompt;
-  $('lblActor').textContent = profile.settingsLabels.actor;
-  $('lblWorld').textContent = profile.settingsLabels.world;
+  $('lblActor').textContent = (profile.settingsLabels || {}).actor || t('settings.actor');
+  $('lblWorld').textContent = (profile.settingsLabels || {}).world || t('settings.world');
 }
 
 function renderTabs() {
@@ -568,15 +569,15 @@ function showUnknown(mindId, title, reason) {
   profile = null;
   const nodes = [];
   if (!mindId) {
-    nodes.push(h('div', null, reason || 'Kein Mind erkannt. Öffne einen Mind-Chat auf venice.ai.'));
+    nodes.push(h('div', null, reason || t('mind.none')));
     showMindbar(nodes);
     return;
   }
-  nodes.push(h('div', null, `Unbekanntes Mind ${mindId}${title ? ' – ' + title : ''}. Welches Profil gehört dazu?`));
+  nodes.push(h('div', null, t('mind.unknown', { id: mindId, title: title ? ' – ' + title : '' })));
   const row = h('div', 'row');
   const sel = h('select');
   MindProfiles.list.forEach((p) => { const o = h('option', null, p.name); o.value = p.id; sel.appendChild(o); });
-  const btn = h('button', 'primary', 'ZUORDNEN');
+  const btn = h('button', 'primary', t('mind.assign'));
   btn.onclick = async () => {
     const { mindMap } = await chrome.storage.local.get('mindMap');
     await chrome.storage.local.set({ mindMap: { ...(mindMap || {}), [mindId]: sel.value } });
@@ -593,7 +594,7 @@ async function refreshMind() {
   refreshing = true;
   try {
     const tab = await findVeniceTab();
-    if (!tab) { showUnknown(null, null, 'Kein venice.ai-Tab gefunden.'); return; }
+    if (!tab) { showUnknown(null, null, t('status.noTab')); return; }
     const { mindMap } = await chrome.storage.local.get('mindMap');
     const d = MindProfiles.detect(tab.url, tab.title, mindMap);
     if (!d.profile) { showUnknown(d.mindId, tab.title); return; }
@@ -601,9 +602,9 @@ async function refreshMind() {
     if (!profile || profile.id !== d.profile.id) await applyProfile(d.profile);
     currentMind = d;
     const b = h('div');
-    b.append(h('b', null, profile.name), document.createTextNode(` · erkannt über ${d.source}${d.mindId ? ' (' + d.mindId + ')' : ''}`));
+    b.append(h('b', null, profile.name), document.createTextNode(t('mind.detected', { source: t('mind.src.' + d.source) }) + (d.mindId ? ' (' + d.mindId + ')' : '')));
     showMindbar([b]);
-    $('unassign').hidden = d.source !== 'zugeordnet';
+    $('unassign').hidden = d.source !== 'assigned';
   } finally {
     refreshing = false;
   }
@@ -650,34 +651,34 @@ function initStatic() {
 
 /* ---------- Profile importieren / exportieren ---------- */
 const TEMPLATE = {
-  id: 'meinmind',
-  name: 'Mein Mind',
-  mindIds: ['HIER-DIE-MIND-ID'],
-  titleMatch: 'Mein Mind',
+  id: 'mymind',
+  name: 'My Mind',
+  mindIds: ['PUT-THE-MIND-ID-HERE'],
+  titleMatch: 'My Mind',
   defaultTime: '12:00',
-  prefixes: { actor: 'OPERATOR', world: 'WELT' },
-  settingsLabels: { actor: 'Präfix Operator', world: 'Präfix Welt' },
+  prefixes: { actor: 'OPERATOR', world: 'WORLD' },
+  settingsLabels: { actor: 'Prefix operator', world: 'Prefix world' },
   theme: {
     fg: '#7fb4ff', dim: '#4a7fc4', mut: '#6a809e', line: '#1b3555', bg: '#05080d', bg2: '#0a121d',
     deep: '#010502', ink: '#04101f', warn: '#ffb000', err: '#ff5252', txt: '#cfe0ff', glow: '108,170,255',
   },
-  header: { logo: 'MEIN MIND', meta: [['ORT  ', 'irgendwo · SID {sid}']], prompt: 'op@host:~#' },
-  eventKinds: { AKTION: '#ffb000', MELDUNG: '#ff5252' },
+  header: { logo: 'MY MIND', meta: [['PLACE', 'somewhere · SID {sid}']], prompt: 'op@host:~#' },
+  eventKinds: { ACTION: '#ffb000', REPORT: '#ff5252' },
   state: { parts: [{ key: 'loc', icon: '📍' }], numbers: [], meters: [] },
   statusRight: '{loc|—}',
   tabs: [
-    { id: 'aktion', label: 'AKTION', blocks: [
-      { type: 'field', id: 'ziel', label: 'Ziel (optional)', placeholder: 'wohin / worauf', clear: true },
-      { type: 'grid', cap: 'BEFEHLE', items: ['Beobachten', 'Vorrücken'],
-        action: { who: 'actor', parts: ['AKTION'], body: ['{item}', '– {field.ziel}'] } },
+    { id: 'action', label: { en: 'ACTION', de: 'AKTION' }, blocks: [
+      { type: 'field', id: 'target', label: { en: 'Target (optional)', de: 'Ziel (optional)' }, placeholder: { en: 'where / at what', de: 'wohin / worauf' }, clear: true },
+      { type: 'grid', cap: { en: 'COMMANDS', de: 'BEFEHLE' }, items: [{ en: 'Observe', de: 'Beobachten' }, { en: 'Advance', de: 'Vorrücken' }],
+        action: { who: 'actor', parts: ['ACTION'], body: ['{item}', '– {field.target}'] } },
     ] },
-    { id: 'welt', label: 'WELT', blocks: [
-      { type: 'compose', kindLabel: 'Art', whoLabel: 'Quelle', textLabel: 'Inhalt',
-        kinds: { MELDUNG: { who: '(optional)', text: 'Was passiert?', quick: ['Es regnet.'] } },
-        action: { who: 'world', parts: ['{kind}', '{who}'], body: ['{text}'], requires: [{ need: 'text', msg: 'Inhalt fehlt.' }] } },
+    { id: 'world', label: { en: 'WORLD', de: 'WELT' }, blocks: [
+      { type: 'compose', kindLabel: { en: 'Type', de: 'Art' }, whoLabel: { en: 'Source', de: 'Quelle' }, textLabel: { en: 'Content', de: 'Inhalt' },
+        kinds: { REPORT: { who: { en: '(optional)', de: '(optional)' }, text: { en: 'What happens?', de: 'Was passiert?' }, quick: [{ en: 'It starts to rain.', de: 'Es regnet.' }] } },
+        action: { who: 'world', parts: ['{kind}', '{who}'], body: ['{text}'], requires: [{ need: 'text', msg: { en: 'Content missing.', de: 'Inhalt fehlt.' } }] } },
     ] },
   ],
-  convention: 'Zeilen in eckigen Klammern mit "{hp}" sind Aktionen des Nutzers. Zeilen mit "{wp}" sind Ereignisse der Welt. Die Uhrzeit ist die Spielzeit. Beende jede Antwort mit: ⏱ HH:MM · 📍 Ort',
+  convention: 'Lines in square brackets starting with "{hp}" are the user\'s actions. Lines starting with "{wp}" are events in the world. The time is the in-world time. End every answer with: ⏱ HH:MM · 📍 place',
 };
 
 const download = (name, text) => {
@@ -695,25 +696,27 @@ const pmsg = (text, ok = true, lines) => {
   (lines || []).forEach((l) => box.appendChild(h('div', null, '· ' + l)));
 };
 
+const nameOf = (p) => MindProfiles.resolve(p.name, I18n.lang);
+
 async function importProfiles(file) {
   if (!file) return;
-  if (file.size > 300000) return pmsg('Datei zu groß (max. 300 KB).', false);
+  if (file.size > 300000) return pmsg(t('profiles.tooBig'), false);
   let data;
-  try { data = JSON.parse(await file.text()); } catch (e) { return pmsg('Keine gültige JSON-Datei: ' + e.message, false); }
+  try { data = JSON.parse(await file.text()); } catch (e) { return pmsg(t('profiles.badJson', { msg: e.message }), false); }
   const list = Array.isArray(data) ? data : Array.isArray(data && data.profiles) ? data.profiles : [data];
   const { customProfiles } = await chrome.storage.local.get('customProfiles');
   const next = { ...(customProfiles || {}) };
   const done = [];
   for (const p of list) {
     const v = MindProfiles.validate(p);
-    const problems = [...v.errors];
-    if (v.ok && MindProfiles.builtins.some((b) => b.id === p.id)) problems.push(`id "${p.id}" ist von einem eingebauten Profil belegt.`);
-    if (problems.length) return pmsg(`Profil "${(p && p.id) || '?'}" nicht importiert:`, false, problems);
-    done.push(next[p.id] ? `${p.name} (ersetzt)` : p.name);
+    const problems = MindProfiles.explain(v.errors, I18n.lang);
+    if (v.ok && MindProfiles.builtins.some((b) => b.id === p.id)) problems.push(t('profiles.idTaken', { id: p.id }));
+    if (problems.length) return pmsg(t('profiles.notImported', { id: (p && p.id) || '?' }), false, problems);
+    done.push(next[p.id] ? t('profiles.replaced', { name: nameOf(p) }) : nameOf(p));
     next[p.id] = p;
   }
   await chrome.storage.local.set({ customProfiles: next });
-  pmsg('Importiert: ' + done.join(', '));
+  pmsg(t('profiles.imported', { names: done.join(', ') }));
 }
 
 function renderProfileManager() {
@@ -722,20 +725,20 @@ function renderProfileManager() {
   MindProfiles.list.forEach((p) => {
     const li = h('li');
     const isCustom = MindProfiles.custom.some((c) => c.id === p.id);
-    li.appendChild(h('span', null, `${p.name} · ${(p.mindIds || []).join(', ') || 'nur Titel'}${isCustom ? ' · eigenes' : ''}`));
+    li.appendChild(h('span', null, `${p.name} · ${(p.mindIds || []).join(', ') || t('profiles.onlyTitle')}${isCustom ? ' · ' + t('profiles.custom') : ''}`));
     const ex = h('button', null, '↓');
-    ex.title = 'Als JSON exportieren';
-    ex.onclick = () => download(`${p.id}.profile.json`, JSON.stringify(p, null, 2));
+    ex.title = t('profiles.export');
+    ex.onclick = () => download(`${p.id}.profile.json`, JSON.stringify(MindProfiles.raw(p.id) || p, null, 2));
     li.appendChild(ex);
     if (isCustom) {
       const del = h('button', null, '×');
-      del.title = 'Profil löschen';
+      del.title = t('profiles.delete');
       del.onclick = async () => {
         const { customProfiles } = await chrome.storage.local.get('customProfiles');
         const next = { ...(customProfiles || {}) };
         delete next[p.id];
         await chrome.storage.local.set({ customProfiles: next });
-        pmsg(`Profil "${p.name}" gelöscht.`);
+        pmsg(t('profiles.deleted', { name: p.name }));
       };
       li.appendChild(del);
     }
@@ -746,14 +749,14 @@ function renderProfileManager() {
 function initProfileManager() {
   $('pimport').onclick = () => $('pfile').click();
   $('pfile').onchange = async (e) => { await importProfiles(e.target.files[0]); e.target.value = ''; };
-  $('ptemplate').onclick = () => download('vorlage.profile.json', JSON.stringify(TEMPLATE, null, 2));
+  $('ptemplate').onclick = () => download(t('profiles.templateFile'), JSON.stringify(TEMPLATE, null, 2));
   const copyPrompt = (file) => async () => {
     try {
       const md = await (await fetch(chrome.runtime.getURL(file))).text();
       const text = md.split('<!-- PROMPT START -->')[1].split('<!-- PROMPT END -->')[0].trim();
       await navigator.clipboard.writeText(text);
-      pmsg('Prompt kopiert. In einen normalen Chat einfügen, unten „MEIN MIND“ bzw. „MY MIND“ ausfüllen, Antwort als .json speichern und importieren.');
-    } catch (e) { pmsg('Kopieren nicht möglich: ' + e.message, false); }
+      pmsg(t('profiles.promptCopied'));
+    } catch (e) { pmsg(t('profiles.copyFailed', { msg: e.message }), false); }
   };
   $('pprompt').onclick = copyPrompt('PROMPT-Profile-Generator.de.md');
   $('pprompt_en').onclick = copyPrompt('PROMPT-Profile-Generator.md');
@@ -767,8 +770,33 @@ function initProfileManager() {
   renderProfileManager();
 }
 
+function setLanguage(l) {
+  I18n.setLang(l);
+  MindProfiles.setLang(I18n.lang);
+  I18n.apply();
+  $('lang').value = I18n.lang;
+  renderProfileManager();
+  status('');
+}
+
+function initLang() {
+  I18n.LANGS.forEach(([code, name]) => { const o = h('option', null, name); o.value = code; $('lang').appendChild(o); });
+  $('lang').onchange = async () => {
+    await chrome.storage.local.set({ lang: $('lang').value });
+    setLanguage($('lang').value);
+    lastUnknown = '';
+    profile = null; // Reiter, Beschriftungen und Szenarien in der neuen Sprache aufbauen
+    refreshMind();
+  };
+}
+
 (async () => {
+  const { lang } = await chrome.storage.local.get('lang');
+  I18n.setLang(lang);
+  MindProfiles.setLang(I18n.lang);
   await new Promise((r) => MindProfiles.init(r));
+  initLang();
+  setLanguage(I18n.lang);
   initStatic();
   initProfileManager();
   await refreshMind();

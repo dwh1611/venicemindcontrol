@@ -523,6 +523,15 @@ Schlägt der Import fehl, nennt die Meldung das Feld:
 5. Zu einem anderen Mind-Tab wechseln und zurück. Wechselt das Panel das Profil?
 
 ## 7. Rezepte
+### 7.0 Mehrere Sprachen in einem Profil
+Jeder Text kann in mehreren Sprachen angegeben werden. Statt eines Strings ein Objekt mit `en` (Pflicht, ist der Rückfall) schreiben:
+
+```json
+{ "id": "order", "label": { "en": "ORDER", "de": "BESTELLEN" }, "blocks": [] }
+```
+
+Das Panel zeigt den Text in der gewählten Oberflächensprache. Das gilt auch für Button-Texte: der gesendete Text folgt der Oberflächensprache. Die *Ereignis-Arten* (das erste `parts`, z. B. `"ORDER"`) als einfache Strings lassen, weil dein Mind-Prompt sich darauf bezieht. Details: [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md#mehrsprachige-texte).
+
 ### 7.1 Optionaler Parameter
 Ein Feld plus ein Segment, das davon abhängt. Ist das Feld leer, entfällt das Segment:
 `"body": ["{item}", "– {field.ziel}"]`

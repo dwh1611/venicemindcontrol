@@ -19,6 +19,7 @@ Mind Console adds a side panel to venice.ai that turns a roleplay Mind into a ga
 • Buttons for scenes, actions and time jumps – inserted into the chat in a clean, consistent line format
 • Status HUD and clock parsed from the Mind's answers
 • Built-in profiles: Nightingale, Ghostline
+• Interface in English (default) and German
 • Add your own Minds without code: import a profile as plain JSON (guide and a generator prompt included)
 • Everything stays in your browser – no tracking, no servers
 
@@ -32,6 +33,7 @@ Mind Console ergänzt venice.ai um eine Seitenleiste, die ein Rollenspiel-Mind i
 • Buttons für Szenen, Aktionen und Zeitsprünge – sauber formatiert in den Chat eingefügt
 • Status-HUD und Uhr aus den Antworten des Minds
 • Eingebaute Profile: Nightingale, Ghostline
+• Oberfläche auf Englisch (Standard) und Deutsch
 • Eigene Minds ohne Code: Profil als reines JSON importieren (Anleitung und Generator-Prompt inklusive)
 • Alles bleibt im Browser – kein Tracking, keine Server
 
