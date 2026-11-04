@@ -78,6 +78,12 @@
       sendResponse({ ok: true, mindId: d.mindId, profile: d.profile ? d.profile.id : null, source: d.source });
       return;
     }
+    if (msg?.type === 'lastReply') {
+      const msgs = [...document.querySelectorAll('.assistant .assistant-content')];
+      const last = msgs[msgs.length - 1];
+      sendResponse(last ? { ok: true, text: last.innerText.trim(), count: msgs.length } : { ok: false, code: 'no_reply' });
+      return;
+    }
     if (msg?.type !== 'inject') return;
 
     const input = findInput();

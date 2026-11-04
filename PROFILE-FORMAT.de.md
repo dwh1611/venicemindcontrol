@@ -112,6 +112,19 @@ Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben
 - Solange noch keine Statuszeile gelesen wurde, ist alles sichtbar. Ein fehlender Wert macht die Bedingung falsch (außer `exists: false`).
 - Wird der offene Reiter ausgeblendet, wechselt das Panel zum ersten sichtbaren Reiter.
 
+## Relay (`relay`, optional)
+Sind zwei Mind-Tabs offen, kann das Panel die letzte Antwort des einen Minds in die Chatbox des anderen kopieren (*RELAY ZWISCHEN ZWEI MINDS*).
+Die Zeile wird mit dem Profil des **Empfängers** gebaut:
+
+```json
+"relay": { "kind": "DIALOGUE", "who": "world" }
+```
+
+- `kind`: Ereignis-Art der Zeile (Großbuchstaben), Standard `RELAY`.
+- `who`: `"world"` (Standard) oder `"actor"`, welches Präfix des Empfänger-Profils genutzt wird.
+- Ergebnis: `[PRÄFIX · HH:MM · ART · Name des Absenders] Text der Antwort`. Die Zeit ist die Uhr des empfangenden Minds (oder dessen `defaultTime`).
+- Ohne `relay` gelten die Standardwerte. Die Art in `eventKinds` eintragen, damit sie im Chat farbig wird.
+
 ## Mehrsprachige Texte
 Jeder Textwert in einem Profil darf statt eines Strings ein Objekt sein:
 

@@ -190,3 +190,13 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 #edErrors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 #edErrors li { border-left: 2px solid var(--err); background: var(--deep); padding: 3px 6px; font-size: 11px; color: var(--err); word-break: break-word; }
 #edErrors li.jump { cursor: pointer; }
+
+.relayrow { display: flex; gap: 6px; align-items: center; }
+.relayrow .k { margin: 0; }
+.relayname { flex: 1; min-width: 0; font-size: 11px; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.relayname.set { color: var(--fg); }
+
+.autobar { position: sticky; top: 0; z-index: 60; display: flex; gap: 8px; align-items: center; justify-content: space-between;
+  border: 1px solid var(--err); background: #1a0606; color: var(--err); padding: 5px 8px; font-size: 11px; letter-spacing: .04em; }
+.autobar button { border-color: var(--err); color: var(--err); background: transparent; font-weight: 700; }
+.autobar button:hover { background: var(--err); color: #000; }
