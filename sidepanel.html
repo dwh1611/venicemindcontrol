@@ -10,8 +10,15 @@
 
   <div class="splitter" id="splitter" hidden title="Drag to resize"></div>
   <aside class="chatpane" id="chatPane" hidden>
-    <div class="chathead"><b data-i18n="chat.title">CHAT</b><span class="grow"></span><span id="chatInfo" class="mut"></span></div>
+    <div class="chathead"><b data-i18n="chat.title">CHAT</b><span id="chatInfo" class="mut"></span><span class="grow"></span>
+      <button id="layBtn" data-i18n-title="chat.layoutHint" aria-label="Layout">⇄</button>
+      <button id="cfMinus" data-i18n-title="chat.cfHint">A−</button><button id="cfPlus" data-i18n-title="chat.cfHint">A+</button></div>
     <div class="chatlist" id="chatList" role="log" aria-live="off"></div>
+    <form class="composer" id="composer">
+      <textarea id="chatInput" rows="2" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph"></textarea>
+      <button id="chatSend" class="primary" type="submit" data-i18n="chat.send">SEND</button>
+      <span id="chatStatus" class="cstat" aria-live="polite"></span>
+    </form>
   </aside>
 
   <main class="term">

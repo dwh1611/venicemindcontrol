@@ -218,22 +218,31 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 .langbar button { padding: 2px 8px; font-size: 11px; }
 .targetbar select { max-width: 100%; min-width: 0; flex: 1; }
 .targetbar label { flex-direction: row; align-items: center; gap: 6px; }
-body.fullpage { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-body.fullpage .term { order: 1; flex: 1 1 auto; min-height: 0; overflow-y: auto; display: block; zoom: 1.3; padding: 16px 20px;
-  column-width: 440px; column-gap: 24px; }
-body.fullpage .term > *, body.fullpage #app > * { break-inside: avoid; margin: 0 0 10px; }
-body.fullpage #app:not([hidden]) { display: contents; }
-body.fullpage .splitter { order: 2; flex: 0 0 8px; cursor: row-resize; background: var(--line); }
+body.fullpage { display: flex; height: 100vh; overflow: hidden; }
+body.fullpage .term { order: 1; min-height: 0; min-width: 0; overflow: auto; display: flex; padding: 12px 14px; }
+body.fullpage .splitter { order: 2; flex: 0 0 8px; background: var(--line); }
 body.fullpage .splitter:hover { background: var(--dim); }
-body.fullpage .chatpane { order: 3; flex: 0 0 var(--chatH, 42vh); min-height: 120px; display: flex; flex-direction: column; background: var(--bg2); }
-body.fullpage #openTab { display: none; }
+body.fullpage .chatpane { order: 3; display: flex; flex-direction: column; background: var(--bg2); min-width: 0; min-height: 0; }
+body.fullpage #openTab, body.fullpage .crt { display: none; }
+/* Chat rechts (Standard) */
+body.fullpage.lay-right { flex-direction: row; }
+body.fullpage.lay-right .term { flex: 0 0 var(--termW, 480px); }
+body.fullpage.lay-right .splitter { cursor: col-resize; }
+body.fullpage.lay-right .chatpane { flex: 1 1 auto; }
+/* Chat unten */
+body.fullpage.lay-bottom { flex-direction: column; }
+body.fullpage.lay-bottom .term { flex: 1 1 auto; }
+body.fullpage.lay-bottom .splitter { cursor: row-resize; }
+body.fullpage.lay-bottom .chatpane { flex: 0 0 var(--chatH, 34vh); min-height: 120px; }
 .chatpane[hidden], .splitter[hidden] { display: none !important; }
-.chathead { display: flex; gap: 8px; padding: 8px 18px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.chathead { display: flex; gap: 6px; align-items: center; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 13px; flex-wrap: wrap; }
+.chathead button { padding: 2px 8px; font-size: 11px; }
+.chathead .mut { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
 .chathead .mut { color: var(--mut); font-size: 13px; }
-.chatlist { flex: 1; overflow-y: auto; padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; font-size: 17px; line-height: 1.55; text-shadow: none; }
-.msg { max-width: 920px; padding: 10px 14px; border: 1px solid var(--line); border-left-width: 3px; background: rgba(0,0,0,.18); }
+.chatlist { flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 16px; font-size: var(--cf, 15px); line-height: 1.5; text-shadow: none; }
+.msg { max-width: 860px; padding: 0 0 0 12px; border-left: 2px solid var(--line); }
 .msg.mind { border-left-color: var(--fg); }
-.msg.user { border-left-color: var(--warn); align-self: flex-end; width: min(920px, 100%); }
+.msg.user { border-left-color: var(--warn); }
 .msg .who { font-size: 12px; letter-spacing: .1em; color: var(--mut); margin-bottom: 4px; }
 .msg.mind .who { color: var(--fg); }
 .msg .body { overflow-wrap: anywhere; color: var(--txt, var(--fg)); }
@@ -252,3 +261,9 @@ body.fullpage #openTab { display: none; }
 .ev .meta { font-size: 13px; color: var(--mut); }
 .ev .txt { flex: 1 1 60%; }
 .chatlist .note { color: var(--mut); text-align: center; font-size: 14px; }
+
+.composer { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line); }
+.composer textarea { flex: 1 1 300px; resize: vertical; min-height: 44px; max-height: 40vh; font: inherit; font-size: var(--cf, 15px); }
+.composer button { padding: 8px 18px; }
+.composer .cstat { flex: 1 0 100%; min-height: 1em; font-size: 12px; color: var(--mut); }
+.composer .cstat.err { color: var(--err); }

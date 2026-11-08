@@ -605,21 +605,58 @@ async function drawChat() {
   if (atEnd) list.scrollTop = list.scrollHeight;
 }
 
+const FULL = { layout: 'right', cf: 15 };
+function applyFull() {
+  const b = document.body;
+  b.classList.toggle('lay-right', FULL.layout === 'right');
+  b.classList.toggle('lay-bottom', FULL.layout === 'bottom');
+  b.style.setProperty('--cf', FULL.cf + 'px');
+  try { localStorage.setItem('fullPrefs', JSON.stringify({ ...FULL, termW: b.style.getPropertyValue('--termW'), chatH: b.style.getPropertyValue('--chatH') })); } catch { /* ignore */ }
+}
 function initSplitter() {
   const sp = $('splitter');
   sp.hidden = false;
-  try { const v = localStorage.getItem('chatH'); if (v) document.body.style.setProperty('--chatH', v); } catch { /* ignore */ }
+  const b = document.body;
+  try {
+    const p = JSON.parse(localStorage.getItem('fullPrefs') || '{}');
+    if (p.layout === 'right' || p.layout === 'bottom') FULL.layout = p.layout;
+    if (p.cf >= 11 && p.cf <= 28) FULL.cf = p.cf;
+    if (p.termW) b.style.setProperty('--termW', p.termW);
+    if (p.chatH) b.style.setProperty('--chatH', p.chatH);
+  } catch { /* ignore */ }
+  applyFull();
+  $('layBtn').onclick = () => { FULL.layout = FULL.layout === 'right' ? 'bottom' : 'right'; applyFull(); };
+  $('cfMinus').onclick = () => { FULL.cf = Math.max(11, FULL.cf - 1); applyFull(); };
+  $('cfPlus').onclick = () => { FULL.cf = Math.min(28, FULL.cf + 1); applyFull(); };
   sp.onpointerdown = (e) => {
     sp.setPointerCapture(e.pointerId);
     sp.onpointermove = (ev) => {
-      const px = Math.max(120, Math.min(window.innerHeight - 160, window.innerHeight - ev.clientY));
-      document.body.style.setProperty('--chatH', px + 'px');
+      if (FULL.layout === 'right') b.style.setProperty('--termW', Math.max(300, Math.min(window.innerWidth - 260, ev.clientX)) + 'px');
+      else b.style.setProperty('--chatH', Math.max(120, Math.min(window.innerHeight - 160, window.innerHeight - ev.clientY)) + 'px');
     };
-    sp.onpointerup = () => {
-      sp.onpointermove = null; sp.onpointerup = null;
-      try { localStorage.setItem('chatH', document.body.style.getPropertyValue('--chatH')); } catch { /* ignore */ }
-    };
+    sp.onpointerup = () => { sp.onpointermove = null; sp.onpointerup = null; applyFull(); };
   };
+}
+
+function initComposer() {
+  const input = $('chatInput');
+  const cs = $('chatStatus');
+  const sendChat = async () => {
+    const text = input.value.trim();
+    if (!text || $('chatSend').disabled) return;
+    $('chatSend').disabled = true;
+    try {
+      const ok = await inject(text, { send: true, append: false });
+      cs.className = 'cstat' + (ok ? '' : ' err');
+      cs.textContent = ok ? t('chat.sentOk') : $('status').textContent;
+      if (ok) { input.value = ''; chatSig = ''; renderChat(); }
+    } finally { $('chatSend').disabled = false; input.focus(); }
+  };
+  $('composer').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // Konsolen-Kürzel (Alt+…, Strg+Enter) gelten hier nicht
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+  });
 }
 
 function initFullpage() {
@@ -630,6 +667,7 @@ function initFullpage() {
   };
   if (!TAB_MODE) return;
   initSplitter();
+  initComposer();
   const want = parseInt(new URLSearchParams(location.search).get('tab'), 10);
   if (!isNaN(want)) pinnedTab = want;
   $('target').onchange = () => {

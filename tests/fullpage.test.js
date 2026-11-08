@@ -15,6 +15,8 @@ run(async () => {
 
   // 2) Im Vollbild: Auswahl sichtbar, zweiter Venice-Tab wählbar, Senden geht an den gewählten Tab.
   const T = await open(base(), { query: 'mode=tab' });
+  await T.ev(`localStorage.clear();0`);
+  await T.ev(`if(!document.body.classList.contains('lay-right'))document.getElementById('layBtn').click();0`); // Zustand vorheriger Läufe zurücksetzen
   const t = T.ev;
   await t(`window.__tabs.push({id:2,url:'https://venice.ai/chat/minds/local/TESTMIND1/y',title:'Second'});window.__active=1;0`);
   await wait(3800);
@@ -47,6 +49,24 @@ run(async () => {
   await wait(2200);
   ok('chat: picks up new message', (await t(`document.querySelectorAll('#chatList .msg').length`)) === 3);
   ok('chat: pane hidden in side panel', (await ev(`document.getElementById('chatPane').hidden`)) === true);
+  ok('layout: default is chat right', (await t(`document.body.classList.contains('lay-right')`)) === true);
+  await t(`document.getElementById('layBtn').click();0`);
+  ok('layout: toggles to chat bottom', (await t(`document.body.classList.contains('lay-bottom') && !document.body.classList.contains('lay-right')`)) === true);
+  const cf0 = parseInt(await t(`document.body.style.getPropertyValue('--cf')`), 10);
+  await t(`document.getElementById('cfPlus').click();0`);
+  ok('layout: chat size changes', (await t(`document.body.style.getPropertyValue('--cf')`)) === (cf0 + 1) + 'px');
+  // Chatbox: schreibt direkt in den gewählten Tab
+  const before = (await t(`window.__injected.length`));
+  await t(`(()=>{const i=document.getElementById('chatInput');i.value='Hello Mind';i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));})();0`);
+  await wait(600);
+  const last = await t(`window.__injected[window.__injected.length-1]`);
+  ok('composer: Enter sends the text as typed', (await t(`window.__injected.length`)) === before + 1 && last.text === 'Hello Mind' && last.send === true && last.mode === 'replace', last);
+  ok('composer: box is cleared after sending', (await t(`document.getElementById('chatInput').value`)) === '');
+  await t(`(()=>{const i=document.getElementById('chatInput');i.value='line1';i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',shiftKey:true,bubbles:true,cancelable:true}));})();0`);
+  await wait(300);
+  ok('composer: Shift+Enter does not send', (await t(`window.__injected.length`)) === before + 1);
+  await t(`document.getElementById('chatInput').value='';0`);
+  await t(`localStorage.clear();0`); // Layout-Einstellungen nicht in den nächsten Lauf mitnehmen
   ok('full: no page errors', T.errs.length === 0, T.errs);
   P.finish();
 });
