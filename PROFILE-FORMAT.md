@@ -100,6 +100,62 @@ Each scenario is an object with the `key`s from `fields`. `{level}` is the inten
 `{twist}` the suggestion from the scenario's `twist` field. Values have no final full stop, because the template adds it.
 The panel sends `[WORLD · HH:MM · SCENARIO · Title] ...`. Show the list with a tab that contains `{"type":"scenarios"}`.
 
+## Rules in the panel (v1.2)
+Several optional parts move game rules out of the Mind and into the panel. All are optional and combine with each other.
+
+### Dice (`roll` in an ACTION)
+```json
+"roll": { "dice": "d20", "mod": 2, "vs": "{item.vs}", "label": "{item.label}" }
+```
+- `dice`: `d20`, `2d6+1` (1–20 dice, 2–1000 sides). `mod` adds a modifier, `vs` is an optional target value. All three may use placeholders such as `{item.dice|d20}`.
+- Fills `{roll.total}`, `{roll.vs}`, `{roll.outcome}` (`SUCCESS` or `FAILURE`, changeable with `success` and `failure`), `{roll.label}`, `{roll.dice}`, `{roll.rolls}` and `{roll.text}` (for example `14 vs 12 · SUCCESS`).
+- Typical use: `"parts": ["ROLL", "{roll.label}", "{roll.text}"]` gives `[PREFIX · 21:40 · ROLL · Stealth · 14 vs 12 · SUCCESS]`.
+- The panel lists the last rolls (*ROLLS*). A *Dice seed* in the settings makes rolls repeatable.
+- Explain `ROLL` lines in the `convention` text so the Mind respects the result.
+
+### Random tables (`tables` and `table` in an ACTION)
+```json
+"tables": { "weather": { "label": "Weather", "entries": ["Rain", { "text": "Storm", "weight": 3 }] } }
+```
+An action with `"table": "weather"` picks one entry (`weight` defaults to 1) and fills `{table}`. A shorter form is a plain list: `"weather": ["Rain", "Fog"]`.
+
+### Scheduled events (`events`)
+```json
+"events": [
+  { "id": "sms1", "at": "22:00", "kind": "SMS", "who": "Mara", "text": "Are you coming?" },
+  { "id": "rain", "in": 60, "kind": "WEATHER", "text": "Rain starts." }
+]
+```
+- Exactly one of `at` (clock time) or `in` (minutes after the clock when the events were started; *RESTART EVENTS* resets it). `daily: true` repeats the event every day.
+- When the in-world clock passes the time (time buttons, *send*, or the clock taken from the status line), the event is **queued** as a `WORLD` line with its own time. It is never sent by itself.
+- Typing the clock by hand and jumps of more than 18 hours do not trigger events. The panel lists pending events with *NOW* and skip.
+- `kind` stays a plain string (protocol), `text` may be translated.
+
+### Game state (`variables`)
+```json
+"variables": {
+  "hp":    { "label": "HP", "value": 8, "min": 0, "max": 10, "icon": "❤" },
+  "gold":  { "label": "Gold", "value": 60, "min": 0 },
+  "items": { "type": "list", "label": "Pack", "value": ["rope"] }
+}
+```
+- Types: `number` (default, optional `min`, `max`) and `list` (strings). Names: `hp`, `money`, `itemList` (letters, digits, `_`).
+- An ACTION changes them with `set`, `add` (numbers) and `push`, `remove` (lists). Values may use placeholders, for example `"add": { "gold": "-{item.price}" }`, `"push": { "items": "{item.thing}" }`.
+- A change that would go below `min` or above `max` is blocked with a message and nothing is queued. Removing something that is not in the list is blocked as well.
+- Changes happen when the action is queued; removing the line from the queue does not undo them (edit the value in the *GAME STATE* box).
+- Every message gets a state line at the end, for example `[WORLD · 21:40 · STATE] HP 8/10 · Gold 60 · Pack: rope`. `stateLine` replaces it with your own template (`{hp}`, `{hpMax}`, `{items}`); it can be switched off in the box.
+- The values show in the HUD, take part in `when` conditions, and are part of saves and the session export.
+- The convention text should say that the `STATE` line is authoritative.
+
+### Buttons from lists (`itemsFrom`)
+```json
+{ "type": "grid", "cap": "USE", "itemsFrom": "items", "empty": "(the pack is empty)",
+  "action": { "who": "actor", "parts": ["USE"], "body": ["{item}"], "remove": { "items": "{item}" } } }
+```
+- `itemsFrom` names a list variable or a list read from the status line. One button per entry, rebuilt when the list changes. `items` and `itemsFrom` can be combined; `empty` is shown when there are no buttons.
+- Lists from the status line: `state.lists`: `{ "key": "seen", "regex": "Seen:\\s*([^·\\n]+)", "sep": "," }`. Group 1 is split at `sep` (default `,`).
+- `when` accepts `{ "key": "items", "has": "key" }` for lists (and text that contains a word).
+
 ## Conditions (`when`)
 Tabs, blocks and grid items (objects) may have a `when` condition. It is checked against the last status line (the HUD values), so
 buttons only appear when they make sense:
@@ -109,8 +165,8 @@ buttons only appear when they make sense:
 { "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
 ```
 
-- `key` is a state key (a `parts`, `numbers` or `meters` key from `state`, plus `time`; meters also have `<key>Max`).
-- Exactly one operator per condition: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (numbers or text), `match` (regular expression), `exists` (`true`/`false`).
+- `key` is a state key (a `parts`, `numbers`, `meters` or `lists` key from `state`, plus `time`; meters also have `<key>Max`) or a variable from `variables`. Variables always count, and take precedence over a status line key with the same name.
+- Exactly one operator per condition: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (numbers or text), `match` (regular expression), `has` (list contains a value, or text contains a word), `exists` (`true`/`false`).
 - Combine with `all` (and), `any` (or) and `not`.
 - Until the first status line has been read, everything is shown. A missing value makes the condition false (except `exists: false`).
 - If the open tab gets hidden, the panel switches to the first visible tab.

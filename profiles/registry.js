@@ -87,6 +87,17 @@
       scenTpl: "scenarios.template.segments is missing.",
       convention: "convention must be a text (or be left out).",
       clock: "clock: true or false.",
+      rollBad: "{w}: roll.dice must look like d20 or 2d6+1 (1–20 dice, 2–1000 sides), mod and vs must be numbers.",
+      tableBad: "tables.{k}: entries must be a non-empty list of texts or { text, weight }.",
+      tableMissing: "{w}: table \"{k}\" is not defined in tables.",
+      varBad: "variables.{k}: key like hp or money, type number or list, value (and min/max for numbers) must fit.",
+      varMissing: "{w}: variable \"{k}\" is missing or has the wrong type (set/add need a number, push/remove a list).",
+      fxBad: "{w}: set, add, push and remove must be objects.",
+      eventBad: "events[{i}]: id, kind, text and exactly one of at (HH:MM) or in (minutes) are required.",
+      eventDup: "events[{i}]: id \"{id}\" is used twice.",
+      itemsFromBad: "{w}: itemsFrom \"{k}\" is neither a list variable nor a state list.",
+      listRegex: "state.lists[{i}].regex is invalid.",
+      stateLineBad: "stateLine must be a text with {variable} placeholders (or be left out).",
       relayBad: "relay: optional kind (capital letters) and who (\"actor\" or \"world\").",
       whenBad: "{w}: when is not a valid condition (key with eq, ne, lt, lte, gt, gte, match or exists; or all, any, not).",
     },
@@ -122,6 +133,17 @@
       scenTpl: "scenarios.template.segments fehlt.",
       convention: "convention muss ein Text sein (oder ganz fehlen).",
       clock: "clock: true oder false.",
+      rollBad: "{w}: roll.dice muss wie d20 oder 2d6+1 aussehen (1–20 Würfel, 2–1000 Seiten), mod und vs müssen Zahlen sein.",
+      tableBad: "tables.{k}: entries muss eine nicht leere Liste aus Texten oder { text, weight } sein.",
+      tableMissing: "{w}: Tabelle \"{k}\" ist in tables nicht definiert.",
+      varBad: "variables.{k}: Name wie hp oder money, type number oder list, value (bei Zahlen auch min/max) müssen passen.",
+      varMissing: "{w}: Variable \"{k}\" fehlt oder hat den falschen Typ (set/add brauchen eine Zahl, push/remove eine Liste).",
+      fxBad: "{w}: set, add, push und remove müssen Objekte sein.",
+      eventBad: "events[{i}]: id, kind, text und genau eines von at (HH:MM) oder in (Minuten) sind nötig.",
+      eventDup: "events[{i}]: id \"{id}\" doppelt.",
+      itemsFromBad: "{w}: itemsFrom \"{k}\" ist weder eine Listen-Variable noch eine Statuslisten.",
+      listRegex: "state.lists[{i}].regex ungültig.",
+      stateLineBad: "stateLine muss ein Text mit {variable}-Platzhaltern sein (oder ganz fehlen).",
       relayBad: "relay: optional kind (Großbuchstaben) und who (\"actor\" oder \"world\").",
       whenBad: "{w}: when ist keine gültige Bedingung (key mit eq, ne, lt, lte, gt, gte, match oder exists; oder all, any, not).",
     },
@@ -131,12 +153,25 @@
     return tpl.replace(/\{(\w+)\}/g, (_m, n) => (e.p && e.p[n] != null ? e.p[n] : ''));
   });
 
+  /* ---------- Würfel: d20, 2d6+1 ---------- */
+  const DICE = /^(\d{0,2})d(\d{1,4})([+-]\d{1,4})?$/i;
+  function parseDice(s) {
+    const m = DICE.exec(String(s || '').trim());
+    if (!m) return null;
+    const n = m[1] === '' ? 1 : parseInt(m[1], 10);
+    const sides = parseInt(m[2], 10);
+    if (n < 1 || n > 20 || sides < 2 || sides > 1000) return null;
+    return { n, sides, mod: m[3] ? parseInt(m[3], 10) : 0 };
+  }
+  const VAR = /^[a-z][A-Za-z0-9_]{0,23}$/;
+  const hasTpl = (v) => typeof v === 'string' && /\{[^{}]+\}/.test(v);
+
   /* ---------- Bedingungen ("when") ----------
      Blenden Reiter, Blöcke und Buttons abhängig vom zuletzt gelesenen Status (HUD) ein oder aus.
        { "key": "hp", "lt": 50 }   eq, ne, lt, lte, gt, gte, match (RegExp), exists (true/false)
        { "all": [..] }  { "any": [..] }  { "not": {..} }
      Solange noch keine Statuszeile gelesen wurde (state == null), ist alles sichtbar. */
-  const OPS = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'match', 'exists'];
+  const OPS = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'match', 'exists', 'has'];
   function validCond(c, depth = 0) {
     if (!isObj(c) || depth > 6) return false;
     if (Array.isArray(c.all)) return c.all.length > 0 && c.all.every((x) => validCond(x, depth + 1));
@@ -158,6 +193,7 @@
     if ('exists' in c) return (v != null && v !== '') === c.exists;
     if (v == null || v === '') return false;
     if ('match' in c) return rx(c.match).test(String(v));
+    if ('has' in c) { const w = String(c.has).toLowerCase(); return Array.isArray(v) ? v.some((x) => String(x).toLowerCase() === w) : String(v).toLowerCase().includes(w); }
     const op = OPS.find((o) => o in c);
     const a = Number(v), b = Number(c[op]);
     const num = !Number.isNaN(a) && !Number.isNaN(b) && String(v).trim() !== '' && String(c[op]).trim() !== '';
@@ -200,6 +236,59 @@
     const st = p.state || {};
     (st.numbers || []).forEach((n, i) => { try { rx(n.regex); } catch { err('numRegex', { i }); } });
     (st.meters || []).forEach((m, i) => { try { rx(m.regex); } catch { err('meterRegex', { i }); } });
+    (st.lists || []).forEach((l, i) => { try { rx(l.regex); } catch { err('listRegex', { i }); } });
+    const vars = isObj(p.variables) ? p.variables : {};
+    if (p.variables != null) {
+      if (!isObj(p.variables)) err('varBad', { k: 'variables' });
+      else Object.entries(p.variables).forEach(([k, v]) => {
+        const num = v && (v.type == null || v.type === 'number');
+        const okv = VAR.test(k) && isObj(v) && (num ? typeof v.value === 'number' : v.type === 'list' && Array.isArray(v.value) && v.value.every((x) => typeof x === 'string')) &&
+          (!num || ((v.min == null || typeof v.min === 'number') && (v.max == null || typeof v.max === 'number') &&
+            (v.min == null || v.value >= v.min) && (v.max == null || v.value <= v.max)));
+        if (!okv) err('varBad', { k });
+      });
+    }
+    const tables = isObj(p.tables) ? p.tables : {};
+    if (p.tables != null) {
+      if (!isObj(p.tables)) err('tableBad', { k: 'tables' });
+      else Object.entries(p.tables).forEach(([k, tb]) => {
+        const ents = isObj(tb) ? tb.entries : tb;
+        const good = Array.isArray(ents) && ents.length && ents.every((e) => typeof e === 'string' ||
+          (isObj(e) && typeof e.text === 'string' && (e.weight == null || (typeof e.weight === 'number' && e.weight > 0))));
+        if (!good) err('tableBad', { k });
+      });
+    }
+    const stateLists = ((p.state || {}).lists || []).map((l) => l.key);
+    const typeOf = (k) => (vars[k] ? (vars[k].type === 'list' ? 'list' : 'number') : null);
+    const checkAction = (a, w) => {
+      if (!isObj(a)) return;
+      if (a.roll != null) {
+        const r = a.roll;
+        const num = (x) => x == null || typeof x === 'number' || (typeof x === 'string' && (hasTpl(x) || /^-?\d+$/.test(x.trim())));
+        const dice = isObj(r) ? r.dice : null;
+        if (!isObj(r) || typeof dice !== 'string' || (!hasTpl(dice) && !parseDice(dice)) || !num(r.mod) || !num(r.vs)) err('rollBad', { w });
+      }
+      if (a.table != null && !hasTpl(String(a.table)) && !(a.table in tables)) err('tableMissing', { w, k: a.table });
+      ['set', 'add', 'push', 'remove'].forEach((fx) => {
+        if (a[fx] == null) return;
+        if (!isObj(a[fx])) { err('fxBad', { w }); return; }
+        Object.keys(a[fx]).forEach((k) => {
+          const want = fx === 'set' || fx === 'add' ? 'number' : 'list';
+          if (typeOf(k) !== want) err('varMissing', { w, k });
+        });
+      });
+    };
+    if (p.stateLine != null && (typeof p.stateLine !== 'string' || !p.stateLine.trim())) err('stateLineBad');
+    if (p.events != null) {
+      const ids = new Set();
+      if (!Array.isArray(p.events)) err('eventBad', { i: 0 });
+      else p.events.forEach((e, i) => {
+        const timed = isObj(e) && ((typeof e.at === 'string' && /^\d{1,2}:\d{2}$/.test(e.at)) !== (typeof e.in === 'number' && e.in >= 0));
+        if (!isObj(e) || typeof e.id !== 'string' || !e.id || !KIND.test(String(e.kind || '')) || typeof e.text !== 'string' || !e.text.trim() || !timed) { err('eventBad', { i }); return; }
+        if (ids.has(e.id)) err('eventDup', { i, id: e.id });
+        ids.add(e.id);
+      });
+    }
     if (!Array.isArray(p.tabs) || !p.tabs.length) err('tabsNone');
     else {
       const ids = new Set();
@@ -216,8 +305,12 @@
           if (b.type === 'grid' && Array.isArray(b.items)) {
             b.items.forEach((it, k) => { if (isObj(it) && it.when != null && !validCond(it.when)) err('whenBad', { w: `${w}.items[${k}]` }); });
           }
+          checkAction(b.action, w);
           if (b.type === 'grid') {
-            if (!Array.isArray(b.items) || !b.items.length) err('itemsMissing', { w });
+            if (b.itemsFrom != null) {
+              if (typeof b.itemsFrom !== 'string' || (typeOf(b.itemsFrom) !== 'list' && !stateLists.includes(b.itemsFrom))) err('itemsFromBad', { w, k: b.itemsFrom });
+            } else if (!Array.isArray(b.items) || !b.items.length) err('itemsMissing', { w });
+            if (b.items != null && !Array.isArray(b.items)) err('itemsMissing', { w });
             if (!isObj(b.action) || !Array.isArray(b.action.parts)) err('actionParts', { w });
           }
           if (b.type === 'compose') {
@@ -248,6 +341,7 @@
         title: p.titleMatch ? rx(p.titleMatch) : null,
         numbers: (st.numbers || []).map((n) => rx(n.regex)),
         meters: (st.meters || []).map((m) => rx(m.regex)),
+        lists: (st.lists || []).map((l) => rx(l.regex)),
       };
       compiled.set(p, c);
     }
@@ -304,6 +398,6 @@
     raw: (id) => [...builtins, ...custom].find((p) => p.id === id),
     register: (p) => builtins.push(p),
     setLang, resolve, explain,
-    setCustom, init, validate, test, detect, mindIdFromUrl, re, fill, segments, parts,
+    setCustom, init, validate, test, parseDice, detect, mindIdFromUrl, re, fill, segments, parts,
   };
 })();
