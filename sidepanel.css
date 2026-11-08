@@ -218,18 +218,37 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 .langbar button { padding: 2px 8px; font-size: 11px; }
 .targetbar select { max-width: 100%; min-width: 0; flex: 1; }
 .targetbar label { flex-direction: row; align-items: center; gap: 6px; }
-body.fullpage { display: grid; grid-template-columns: minmax(380px, 520px) 1fr; align-items: start; min-height: 100vh; }
-body.fullpage .term { padding: 16px; order: 1; }
-body.fullpage .chatpane { order: 2; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--bg2); }
+body.fullpage { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+body.fullpage .term { order: 1; flex: 1 1 auto; min-height: 0; overflow-y: auto; display: block; zoom: 1.3; padding: 16px 20px;
+  column-width: 440px; column-gap: 24px; }
+body.fullpage .term > *, body.fullpage #app > * { break-inside: avoid; margin: 0 0 10px; }
+body.fullpage #app:not([hidden]) { display: contents; }
+body.fullpage .splitter { order: 2; flex: 0 0 8px; cursor: row-resize; background: var(--line); }
+body.fullpage .splitter:hover { background: var(--dim); }
+body.fullpage .chatpane { order: 3; flex: 0 0 var(--chatH, 42vh); min-height: 120px; display: flex; flex-direction: column; background: var(--bg2); }
 body.fullpage #openTab { display: none; }
-.chatpane[hidden] { display: none; }
-.chathead { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
-.chathead .mut { color: var(--mut); font-size: 11px; }
-.chatlist { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.msg { max-width: 760px; }
-.msg .who { font-size: 10px; letter-spacing: .08em; color: var(--mut); margin-bottom: 2px; }
+.chatpane[hidden], .splitter[hidden] { display: none !important; }
+.chathead { display: flex; gap: 8px; padding: 8px 18px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.chathead .mut { color: var(--mut); font-size: 13px; }
+.chatlist { flex: 1; overflow-y: auto; padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; font-size: 17px; line-height: 1.55; text-shadow: none; }
+.msg { max-width: 920px; padding: 10px 14px; border: 1px solid var(--line); border-left-width: 3px; background: rgba(0,0,0,.18); }
+.msg.mind { border-left-color: var(--fg); }
+.msg.user { border-left-color: var(--warn); align-self: flex-end; width: min(920px, 100%); }
+.msg .who { font-size: 12px; letter-spacing: .1em; color: var(--mut); margin-bottom: 4px; }
 .msg.mind .who { color: var(--fg); }
-.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
-.msg.user .body { color: var(--dim); }
-.msg .body .hud { color: var(--mut); }
-.chatlist .note { color: var(--mut); text-align: center; }
+.msg .body { overflow-wrap: anywhere; color: var(--txt, var(--fg)); }
+.msg .body > :first-child { margin-top: 0; } .msg .body > :last-child { margin-bottom: 0; }
+.msg .body p { margin: 0 0 .7em; }
+.msg .body h1, .msg .body h2, .msg .body h3, .msg .body h4 { margin: .8em 0 .4em; font-size: 1.1em; color: var(--fg); }
+.msg .body ul, .msg .body ol { margin: 0 0 .7em; padding-left: 1.4em; }
+.msg .body blockquote { margin: 0 0 .7em; padding-left: 12px; border-left: 2px solid var(--line); color: var(--mut); }
+.msg .body pre { margin: 0 0 .7em; padding: 8px 10px; background: var(--deep); border: 1px solid var(--line); overflow-x: auto; font-size: 14px; line-height: 1.35; }
+.msg .body code { background: var(--deep); padding: 0 4px; font-size: .9em; }
+.msg .body pre code { background: none; padding: 0; }
+.msg .body p.hud { color: var(--mut); font-size: 14px; background: none; border: 0; border-top: 1px dashed var(--line); padding: 6px 0 0; margin-top: .8em; }
+.msg .body strong { color: var(--fg); }
+.ev { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin: 0 0 .5em; }
+.ev .chip { font-size: 12px; padding: 1px 8px; border: 1px solid currentColor; letter-spacing: .06em; white-space: nowrap; }
+.ev .meta { font-size: 13px; color: var(--mut); }
+.ev .txt { flex: 1 1 60%; }
+.chatlist .note { color: var(--mut); text-align: center; font-size: 14px; }

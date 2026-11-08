@@ -533,6 +533,43 @@ async function renderTarget() {
   sel.value = pinnedTab == null ? '' : String(pinnedTab);
 }
 
+/* ---------- Chat-Formatierung (nur Text-Knoten, keine fremden Attribute) ---------- */
+const CHAT_TAGS = new Set(['P', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL', 'UL', 'OL', 'LI', 'CODE', 'PRE', 'BR', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD']);
+function cleanNode(src, dst) {
+  src.childNodes.forEach((n) => {
+    if (n.nodeType === 3) dst.appendChild(document.createTextNode(n.textContent));
+    else if (n.nodeType === 1) {
+      if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'].includes(n.tagName)) return;
+      if (CHAT_TAGS.has(n.tagName)) { const e = document.createElement(n.tagName.toLowerCase()); cleanNode(n, e); dst.appendChild(e); }
+      else cleanNode(n, dst); // unbekanntes Element: nur der Inhalt bleibt (z. B. div, span, a)
+    }
+  });
+}
+const EVENT_RX = /^\[([^\]·]+?)\s*·\s*(\d{1,2}:\d{2})\s*·\s*([^·\]]+?)(?:\s*·\s*([^\]]+))?\]\s*([\s\S]*)$/;
+function eventRow(p) {
+  const m = EVENT_RX.exec(p.textContent.trim());
+  if (!m) return null;
+  const color = profile && profile.eventKinds && profile.eventKinds[m[3].trim()];
+  const row = h('div', 'ev');
+  const chip = h('span', 'chip', m[3].trim());
+  if (color) chip.style.color = color;
+  row.append(chip, h('span', 'meta', m[2] + ' · ' + m[1].trim() + (m[4] ? ' · ' + m[4].trim() : '')));
+  if (m[5]) row.appendChild(h('span', 'txt', m[5]));
+  return row;
+}
+function chatBody(m) {
+  const wrap = document.createElement('div');
+  if (m.html) cleanNode(new DOMParser().parseFromString(m.html, 'text/html').body, wrap);
+  else m.text.split(/\n\n+/).forEach((para) => wrap.appendChild(h('p', null, para)));
+  [...wrap.children].forEach((c) => {
+    if (c.tagName !== 'P') return;
+    const txt = c.textContent.trim();
+    if (m.role === 'mind' && txt.startsWith('⏱')) c.className = 'hud';
+    else if (m.role === 'user') { const r = eventRow(c); if (r) c.replaceWith(r); }
+  });
+  return wrap;
+}
+
 let chatSig = '';
 let chatBusy = false;
 async function renderChat() {
@@ -561,15 +598,28 @@ async function drawChat() {
     const box = h('div', 'msg ' + m.role);
     box.appendChild(h('div', 'who', t(m.role === 'mind' ? 'chat.mind' : 'chat.you')));
     const body = h('div', 'body');
-    m.text.split('\n').forEach((line, i) => {
-      if (i) body.appendChild(document.createTextNode('\n'));
-      if (m.role === 'mind' && line.startsWith('⏱')) body.appendChild(h('span', 'hud', line)); // Statuszeile abgesetzt
-      else body.appendChild(document.createTextNode(line));
-    });
+    body.appendChild(chatBody(m));
     box.appendChild(body);
     list.appendChild(box);
   });
   if (atEnd) list.scrollTop = list.scrollHeight;
+}
+
+function initSplitter() {
+  const sp = $('splitter');
+  sp.hidden = false;
+  try { const v = localStorage.getItem('chatH'); if (v) document.body.style.setProperty('--chatH', v); } catch { /* ignore */ }
+  sp.onpointerdown = (e) => {
+    sp.setPointerCapture(e.pointerId);
+    sp.onpointermove = (ev) => {
+      const px = Math.max(120, Math.min(window.innerHeight - 160, window.innerHeight - ev.clientY));
+      document.body.style.setProperty('--chatH', px + 'px');
+    };
+    sp.onpointerup = () => {
+      sp.onpointermove = null; sp.onpointerup = null;
+      try { localStorage.setItem('chatH', document.body.style.getPropertyValue('--chatH')); } catch { /* ignore */ }
+    };
+  };
 }
 
 function initFullpage() {
@@ -579,6 +629,7 @@ function initFullpage() {
     await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html' + q) });
   };
   if (!TAB_MODE) return;
+  initSplitter();
   const want = parseInt(new URLSearchParams(location.search).get('tab'), 10);
   if (!isNaN(want)) pinnedTab = want;
   $('target').onchange = () => {

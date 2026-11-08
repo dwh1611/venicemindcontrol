@@ -34,11 +34,14 @@ run(async () => {
   await wait(3800);
   ok('full: closed tab falls back to auto', (await t(`document.getElementById('target').value`)) === '');
   // Chat-Ansicht: zeigt den Verlauf des gewählten Tabs, aktualisiert sich bei neuen Nachrichten
-  await t(`window.__transcript={1:[{role:'user',text:'[WORLD · 10:00 · ACTION · x] hello'},{role:'mind',text:'Reply one\\n\\n⏱ 10:00 · hp 5'}]};0`);
+  await t(`window.__transcript={1:[{role:'user',text:'[WORLD · 10:00 · ACTION · x] hello'},{role:'mind',text:'Reply one',html:'<p>Reply <strong>one</strong></p><ul><li>a</li></ul><p>⏱ 10:00 · hp 5</p><script>window.__xss=1<\\/script><p onclick=\\"window.__xss=2\\">x</p>'}]};0`);
   await wait(2200);
   ok('chat: pane visible', (await t(`document.getElementById('chatPane').hidden`)) === false);
   const msgs = await t(`[...document.querySelectorAll('#chatList .msg')].map(m=>m.className+'|'+m.querySelector('.body').textContent)`);
-  ok('chat: shows both messages with roles', msgs.length === 2 && msgs[0].startsWith('msg user|[WORLD') && msgs[1].startsWith('msg mind|Reply one'), msgs);
+  ok('chat: shows both messages with roles', msgs.length === 2 && msgs[0].startsWith('msg user|') && msgs[1].startsWith('msg mind|Reply one'), msgs);
+  ok('chat: event line becomes a chip row', (await t(`document.querySelector('#chatList .ev .chip').textContent`)) === 'ACTION' && (await t(`document.querySelector('#chatList .ev .txt').textContent`)) === 'hello');
+  ok('chat: markdown formatting kept', (await t(`document.querySelectorAll('#chatList .msg.mind strong, #chatList .msg.mind li').length`)) === 2);
+  ok('chat: scripts and attributes are dropped', (await t(`!window.__xss && !document.querySelector('#chatList [onclick], #chatList script')`)) === true);
   ok('chat: status line is set apart', (await t(`document.querySelectorAll('#chatList .hud').length`)) === 1);
   await t(`window.__transcript[1].push({role:'user',text:'next'});0`);
   await wait(2200);
