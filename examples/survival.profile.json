@@ -1,0 +1,302 @@
+{
+  "id": "survival",
+  "name": {
+    "en": "Survival",
+    "de": "Überleben"
+  },
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Survival|Überleben",
+  "defaultTime": "06:00",
+  "prefixes": {
+    "actor": "SURVIVOR",
+    "world": "NATURE"
+  },
+  "theme": {
+    "fg": "#5fe08a",
+    "dim": "#2f9a55",
+    "mut": "#5f8a6c",
+    "line": "#1b4a2c",
+    "bg": "#040a06",
+    "bg2": "#08140b",
+    "deep": "#010402",
+    "ink": "#03140a",
+    "warn": "#ffcc44",
+    "err": "#ff5252",
+    "txt": "#d4f5df",
+    "glow": "95,224,138"
+  },
+  "header": {
+    "logo": "S U R V I V E",
+    "meta": [
+      [
+        "DAY",
+        "{sid}"
+      ]
+    ],
+    "prompt": "survivor@wild:~#"
+  },
+  "eventKinds": {
+    "MOVE": "#5fe08a",
+    "CARE": "#ffcc44",
+    "REST": "#6cc8ff",
+    "FIGHT": "#ff5252",
+    "WEATHER": "#778899"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "hp",
+        "regex": "HP\\s*(\\d{1,3})",
+        "icon": "❤",
+        "unit": ""
+      }
+    ],
+    "meters": [
+      {
+        "key": "energy",
+        "label": {
+          "en": "ENERGY",
+          "de": "ENERGIE"
+        },
+        "regex": "Energy\\s*(\\d)\\s*\\/\\s*(\\d)",
+        "max": 5
+      }
+    ]
+  },
+  "statusRight": "❤ {hp|—}",
+  "convention": {
+    "en": "Lines starting with \"{hp}\" are the survivor's actions, lines starting with \"{wp}\" are events in nature. The time is the in-world time. End every reply with one status line: ⏱ HH:MM · 📍 place · HP 100 · Energy 4/5",
+    "de": "Zeilen mit \"{hp}\" sind Handlungen des Überlebenden, Zeilen mit \"{wp}\" Ereignisse in der Natur. Die Zeit ist die Spielzeit. Beende jede Antwort mit einer Statuszeile: ⏱ HH:MM · 📍 Ort · HP 100 · Energy 4/5"
+  },
+  "tabs": [
+    {
+      "id": "act",
+      "label": {
+        "en": "ACT",
+        "de": "HANDELN"
+      },
+      "blocks": [
+        {
+          "type": "hint",
+          "text": {
+            "en": "Some buttons only appear when the status line makes them useful.",
+            "de": "Manche Buttons erscheinen nur, wenn die Statuszeile sie sinnvoll macht."
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "ALWAYS",
+            "de": "IMMER"
+          },
+          "items": [
+            {
+              "en": "Look around",
+              "de": "Umsehen"
+            },
+            {
+              "en": "Walk on",
+              "de": "Weitergehen"
+            },
+            {
+              "en": "Gather wood",
+              "de": "Holz sammeln"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "MOVE"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "WHEN NEEDED",
+            "de": "BEI BEDARF"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Treat wounds",
+                "de": "Wunden versorgen"
+              },
+              "when": {
+                "key": "hp",
+                "lt": 60
+              }
+            },
+            {
+              "label": {
+                "en": "Eat something",
+                "de": "Etwas essen"
+              },
+              "when": {
+                "key": "energy",
+                "lte": 2
+              }
+            },
+            {
+              "label": {
+                "en": "Fight back",
+                "de": "Zurückschlagen"
+              },
+              "when": {
+                "key": "hp",
+                "gte": 20
+              }
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "CARE"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "camp",
+      "label": {
+        "en": "CAMP",
+        "de": "LAGER"
+      },
+      "when": {
+        "key": "loc",
+        "match": "camp|lager"
+      },
+      "blocks": [
+        {
+          "type": "hint",
+          "text": {
+            "en": "This tab only shows while the place contains \"camp\".",
+            "de": "Dieser Reiter erscheint nur, solange der Ort \"Lager\" enthält."
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "REST",
+            "de": "RUHEN"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Nap",
+                "de": "Nickerchen"
+              },
+              "m": 30
+            },
+            {
+              "label": {
+                "en": "Sleep",
+                "de": "Schlafen"
+              },
+              "m": 480
+            },
+            {
+              "label": {
+                "en": "until dawn",
+                "de": "bis zum Morgen"
+              },
+              "until": "06:00"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "REST"
+            ],
+            "body": [
+              "{item.label}",
+              "({until_minutes} min)"
+            ],
+            "shift": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "world",
+      "label": {
+        "en": "NATURE",
+        "de": "NATUR"
+      },
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": {
+            "en": "Type",
+            "de": "Art"
+          },
+          "whoLabel": {
+            "en": "Source",
+            "de": "Quelle"
+          },
+          "textLabel": {
+            "en": "Event",
+            "de": "Ereignis"
+          },
+          "kinds": {
+            "WEATHER": {
+              "label": {
+                "en": "Weather",
+                "de": "Wetter"
+              },
+              "who": "Sky",
+              "text": {
+                "en": "What changes?",
+                "de": "Was ändert sich?"
+              },
+              "quick": [
+                {
+                  "en": "A storm rolls in.",
+                  "de": "Ein Sturm zieht auf."
+                },
+                {
+                  "en": "Fog thickens.",
+                  "de": "Nebel wird dichter."
+                }
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": {
+                  "en": "Event description missing.",
+                  "de": "Ereignis fehlt."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "profiles": [
+    {
+      "id": "gm-story",
+      "name": {
+        "en": "Story (game master)",
+        "de": "Geschichte (Spielleiter)"
+      },
+      "mindIds": [
+        "YOUR-GM-MIND-ID"
+      ],
+      "prefixes": {
+        "actor": "PLAYER",
+        "world": "GM"
+      },
+      "relay": {
+        "kind": "NPC",
+        "who": "world"
+      },
+      "theme": {
+        "fg": "#7fb4ff",
+        "dim": "#4a7fc4",
+        "mut": "#6a809e",
+        "line": "#1b3555",
+        "bg": "#05080d",
+        "bg2": "#0a121d",
+        "deep": "#010502",
+        "ink": "#04101f",
+        "warn": "#ffb000",
+        "err": "#ff5252",
+        "txt": "#cfe0ff",
+        "glow": "108,170,255"
+      },
+      "header": {
+        "logo": "G A M E  M A S T E R",
+        "meta": [
+          [
+            "ROLE",
+            {
+              "en": "Story (game master)",
+              "de": "Geschichte (Spielleiter)"
+            }
+          ]
+        ],
+        "prompt": "gm-story@game:~#"
+      },
+      "eventKinds": {
+        "ACT": "#7fb4ff",
+        "NPC": "#ffcc44"
+      },
+      "tabs": [
+        {
+          "id": "act",
+          "label": {
+            "en": "ACT",
+            "de": "HANDELN"
+          },
+          "blocks": [
+            {
+              "type": "grid",
+              "cap": {
+                "en": "ACTIONS",
+                "de": "AKTIONEN"
+              },
+              "items": [
+                {
+                  "en": "Look around",
+                  "de": "Umsehen"
+                },
+                {
+                  "en": "Ask the guide",
+                  "de": "Den Führer fragen"
+                },
+                {
+                  "en": "Move on",
+                  "de": "Weitergehen"
+                }
+              ],
+              "action": {
+                "who": "actor",
+                "parts": [
+                  "ACT"
+                ],
+                "body": [
+                  "{item}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "npc-guide",
+      "name": {
+        "en": "Guide (character)",
+        "de": "Führer (Figur)"
+      },
+      "mindIds": [
+        "YOUR-NPC-MIND-ID"
+      ],
+      "prefixes": {
+        "actor": "PLAYER",
+        "world": "GM"
+      },
+      "relay": {
+        "kind": "GM",
+        "who": "world"
+      },
+      "theme": {
+        "fg": "#e8a76a",
+        "dim": "#a8703a",
+        "mut": "#8a7560",
+        "line": "#4a3322",
+        "bg": "#0e0a07",
+        "bg2": "#171009",
+        "deep": "#080503",
+        "ink": "#1d1108",
+        "warn": "#ffcc66",
+        "err": "#ff5252",
+        "txt": "#f3dcc2",
+        "glow": "232,167,106"
+      },
+      "header": {
+        "logo": "G U I D E",
+        "meta": [
+          [
+            "ROLE",
+            {
+              "en": "Guide (character)",
+              "de": "Führer (Figur)"
+            }
+          ]
+        ],
+        "prompt": "npc-guide@game:~#"
+      },
+      "eventKinds": {
+        "ACT": "#e8a76a",
+        "GM": "#7fb4ff"
+      },
+      "tabs": [
+        {
+          "id": "act",
+          "label": {
+            "en": "ACT",
+            "de": "HANDELN"
+          },
+          "blocks": [
+            {
+              "type": "grid",
+              "cap": {
+                "en": "ACTIONS",
+                "de": "AKTIONEN"
+              },
+              "items": [
+                {
+                  "en": "Greet the guide",
+                  "de": "Den Führer begrüßen"
+                },
+                {
+                  "en": "Ask for the way",
+                  "de": "Nach dem Weg fragen"
+                }
+              ],
+              "action": {
+                "who": "actor",
+                "parts": [
+                  "ACT"
+                ],
+                "body": [
+                  "{item}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

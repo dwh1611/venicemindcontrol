@@ -115,8 +115,8 @@ In the panel under **PROFILE (IMPORTIEREN / EXPORTIEREN)** (profiles, import / e
   Paste it into a normal chat, fill in "MY MIND" at the bottom and save the answer as a `.json` file.
 
 A profile can describe tabs with buttons, input fields and forms, a status line, colours, scenarios and even slash commands (`format: "raw"`).
-There is a step-by-step [author guide](AUTHOR-GUIDE.md) and the complete format in [PROFILE-FORMAT.md](PROFILE-FORMAT.md). Examples are in [`examples/`](examples/)
-(café tutorial, noir with scenarios, slash commands).
+There is a step-by-step [author guide](AUTHOR-GUIDE.md) and the complete format in [PROFILE-FORMAT.md](PROFILE-FORMAT.md). Examples are in [`examples/`](examples/) with an [overview](examples/README.md)
+(minimal, café, houseguest, noir, netrunner, survival, slash commands, two minds).
 
 **Important:** profiles are **data, not code**. They contain no functions and run nothing.
 
@@ -199,7 +199,7 @@ i18n.js                       interface texts (English default, German)
 profiles/registry.js          detection, validation, placeholders
 profiles/nightingale.js       built-in profile
 profiles/ghostline.js         built-in profile
-examples/                     example profiles to import (café tutorial DE/EN, noir DE/EN, slash commands)
+examples/                     example profiles to import, see examples/README.md (minimal, café, houseguest, noir, netrunner, survival, slash commands, two minds)
 AUTHOR-GUIDE(.de).md          guide: build your own profile
 PROFILE-FORMAT(.de).md        profile format (reference)
 PROMPT-Profile-Generator(.de).md  prompt that creates a profile from a description of a mind

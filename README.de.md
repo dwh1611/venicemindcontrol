@@ -112,7 +112,7 @@ Im Panel unter **PROFILE (IMPORTIEREN / EXPORTIEREN)**:
   In einen normalen Chat einfügen, unten „MEIN MIND“ ausfüllen und die Antwort als `.json` speichern.
 
 Ein Profil kann Reiter mit Buttons, Eingabefeldern und Formularen, eine Statuszeile, Farben, Szenarien und sogar Slash-Befehle (`format: "raw"`) beschreiben.
-Eine Schritt-für-Schritt-Anleitung steht im [Autoren-Leitfaden](AUTHOR-GUIDE.de.md), das vollständige Format in [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md). Beispiele liegen in [`examples/`](examples/) (Café-Tutorial, Noir mit Szenarien, Slash-Befehle).
+Eine Schritt-für-Schritt-Anleitung steht im [Autoren-Leitfaden](AUTHOR-GUIDE.de.md), das vollständige Format in [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md). Beispiele liegen in [`examples/`](examples/) mit einer [Übersicht](examples/README.de.md) (minimal, Café, Gastgeber, Noir, Netrunner, Survival, Slash-Befehle, zwei Minds).
 
 **Wichtig:** Profile sind **Daten, kein Code**. Sie enthalten keine Funktionen und führen nichts aus.
 
@@ -195,7 +195,7 @@ i18n.js                       Oberflächentexte (Standard Englisch, Deutsch)
 profiles/registry.js          Erkennung, Prüfung, Platzhalter
 profiles/nightingale.js       eingebautes Profil
 profiles/ghostline.js         eingebautes Profil
-examples/                     Beispielprofile zum Importieren (Café-Tutorial DE/EN, Noir DE/EN, Slash-Befehle)
+examples/                     Beispielprofile zum Importieren, siehe examples/README.de.md (minimal, Café, Gastgeber, Noir, Netrunner, Survival, Slash-Befehle, zwei Minds)
 AUTHOR-GUIDE(.de).md          Leitfaden: eigenes Profil bauen
 PROFILE-FORMAT(.de).md        Format der Profile (Referenz)
 PROMPT-Profile-Generator(.de).md  Prompt, der aus einer Mind-Beschreibung ein Profil erzeugt

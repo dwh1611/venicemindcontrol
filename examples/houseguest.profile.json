@@ -1,0 +1,397 @@
+{
+  "id": "houseguest",
+  "name": {
+    "en": "Houseguest",
+    "de": "Hausgast"
+  },
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Guest|Gast",
+  "defaultTime": "18:30",
+  "prefixes": {
+    "actor": "HOST",
+    "world": "WORLD"
+  },
+  "settingsLabels": {
+    "actor": {
+      "en": "Prefix host",
+      "de": "Präfix Gastgeber"
+    },
+    "world": {
+      "en": "Prefix world",
+      "de": "Präfix Welt"
+    }
+  },
+  "theme": {
+    "fg": "#e8a76a",
+    "dim": "#a8703a",
+    "mut": "#8a7560",
+    "line": "#4a3322",
+    "bg": "#0e0a07",
+    "bg2": "#171009",
+    "deep": "#080503",
+    "ink": "#1d1108",
+    "warn": "#ffcc66",
+    "err": "#ff5252",
+    "txt": "#f3dcc2",
+    "glow": "232,167,106"
+  },
+  "header": {
+    "logo": "H O U S E",
+    "meta": [
+      [
+        {
+          "en": "GUEST",
+          "de": "GAST"
+        },
+        "{lat} km"
+      ],
+      [
+        "STATUS",
+        "●"
+      ]
+    ],
+    "prompt": "host@house:~#"
+  },
+  "eventKinds": {
+    "SAY": "#d4a574",
+    "DO": "#8fbc8f",
+    "OFFER": "#87ceeb",
+    "ASK": "#dda0dd",
+    "SMS": "#ffaa44",
+    "WEATHER": "#778899",
+    "WAIT": "#808080"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      },
+      {
+        "key": "mood",
+        "icon": "😊"
+      }
+    ],
+    "meters": [
+      {
+        "key": "comfort",
+        "label": {
+          "en": "COMFORT",
+          "de": "KOMFORT"
+        },
+        "regex": "Comfort\\s*(\\d)\\s*\\/\\s*(\\d)",
+        "max": 5
+      }
+    ]
+  },
+  "convention": {
+    "en": "Lines in square brackets starting with \"{hp}\" are the host's actions: SAY = speaking, DO = physical actions, OFFER = offering something, ASK = a question. Lines starting with \"{wp}\" are events: SMS = a text message, WEATHER = weather change. The time in each line is the in-world time and never runs backwards. Free text below the lines is direct speech or action of the host. End every reply with: ⏱ HH:MM · 📍 place · 😊 mood · Comfort 3/5",
+    "de": "Zeilen in eckigen Klammern mit \"{hp}\" sind Handlungen des Gastgebers: SAY = Sprechen, DO = körperliche Handlung, OFFER = etwas anbieten, ASK = eine Frage. Zeilen mit \"{wp}\" sind Ereignisse: SMS = eine Nachricht, WEATHER = Wetterwechsel. Die Uhrzeit in jeder Zeile ist die Spielzeit und läuft nie rückwärts. Freier Text darunter ist direkte Rede oder Handlung des Gastgebers. Beende jede Antwort mit: ⏱ HH:MM · 📍 Ort · 😊 Stimmung · Komfort 3/5"
+  },
+  "tabs": [
+    {
+      "id": "talk",
+      "label": {
+        "en": "TALK",
+        "de": "SPRECHEN"
+      },
+      "blocks": [
+        {
+          "type": "hint",
+          "text": {
+            "en": "Optional topic; the line works without it.",
+            "de": "Optionales Thema; die Zeile geht auch ohne."
+          }
+        },
+        {
+          "type": "field",
+          "id": "topic",
+          "label": {
+            "en": "Topic (optional)",
+            "de": "Thema (optional)"
+          },
+          "placeholder": {
+            "en": "the house, the trip…",
+            "de": "das Haus, die Reise …"
+          },
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "SAY",
+            "de": "SAGEN"
+          },
+          "items": [
+            {
+              "en": "Welcome to my home.",
+              "de": "Willkommen in meinem Zuhause."
+            },
+            {
+              "en": "Make yourself comfortable.",
+              "de": "Fühl dich wie zu Hause."
+            },
+            {
+              "en": "Would you like a drink?",
+              "de": "Möchtest du etwas trinken?"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "SAY"
+            ],
+            "body": [
+              "{item}",
+              "→ {field.topic}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "do",
+      "label": {
+        "en": "DO",
+        "de": "TUN"
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": {
+            "en": "ACTIONS",
+            "de": "HANDLUNGEN"
+          },
+          "items": [
+            {
+              "en": "Lead her inside",
+              "de": "Sie hineinführen"
+            },
+            {
+              "en": "Show the garden",
+              "de": "Den Garten zeigen"
+            },
+            {
+              "en": "Check your phone",
+              "de": "Aufs Handy schauen"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "DO"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "offer",
+      "label": {
+        "en": "OFFER",
+        "de": "ANBIETEN"
+      },
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": {
+            "en": "Type",
+            "de": "Art"
+          },
+          "whoLabel": {
+            "en": "To",
+            "de": "An"
+          },
+          "textLabel": {
+            "en": "What",
+            "de": "Was"
+          },
+          "kinds": {
+            "OFFER": {
+              "label": {
+                "en": "Offer",
+                "de": "Anbieten"
+              },
+              "who": "Guest",
+              "text": {
+                "en": "What do you offer?",
+                "de": "Was bietest du an?"
+              },
+              "quick": [
+                {
+                  "en": "A glass of wine",
+                  "de": "Ein Glas Wein"
+                },
+                {
+                  "en": "The guest room",
+                  "de": "Das Gästezimmer"
+                }
+              ]
+            },
+            "ASK": {
+              "label": {
+                "en": "Ask",
+                "de": "Fragen"
+              },
+              "who": "Guest",
+              "text": {
+                "en": "What do you ask?",
+                "de": "Was fragst du?"
+              },
+              "quick": [
+                {
+                  "en": "Would you like to stay?",
+                  "de": "Möchtest du bleiben?"
+                }
+              ]
+            }
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": {
+                  "en": "Content is missing.",
+                  "de": "Inhalt fehlt."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "world",
+      "label": {
+        "en": "EVENTS",
+        "de": "EREIGNISSE"
+      },
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": {
+            "en": "Source",
+            "de": "Quelle"
+          },
+          "whoLabel": {
+            "en": "From",
+            "de": "Von"
+          },
+          "textLabel": {
+            "en": "Event",
+            "de": "Ereignis"
+          },
+          "kinds": {
+            "SMS": {
+              "label": "SMS",
+              "who": "Mara",
+              "text": {
+                "en": "Message",
+                "de": "Nachricht"
+              },
+              "quick": [
+                {
+                  "en": "Sorry, wrong date!",
+                  "de": "Sorry, falsches Datum!"
+                }
+              ]
+            },
+            "WEATHER": {
+              "label": {
+                "en": "Weather",
+                "de": "Wetter"
+              },
+              "who": "Sky",
+              "text": {
+                "en": "Weather change",
+                "de": "Wetterwechsel"
+              },
+              "quick": [
+                {
+                  "en": "Rain starts falling",
+                  "de": "Es beginnt zu regnen"
+                }
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": {
+                  "en": "Event description missing.",
+                  "de": "Ereignis fehlt."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wait",
+      "label": {
+        "en": "WAIT",
+        "de": "WARTEN"
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": {
+            "en": "TIME PASSES",
+            "de": "ZEIT VERGEHT"
+          },
+          "items": [
+            {
+              "label": "5 min",
+              "m": 5
+            },
+            {
+              "label": "1 h",
+              "m": 60
+            },
+            {
+              "label": {
+                "en": "until evening",
+                "de": "bis abends"
+              },
+              "until": "20:00"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "WAIT"
+            ],
+            "body": [
+              "{item.label}",
+              "({until_minutes} min)"
+            ],
+            "shift": true
+          }
+        }
+      ]
+    }
+  ]
+}
