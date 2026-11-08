@@ -97,6 +97,62 @@ Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Fel
 Jedes Szenario ist ein Objekt mit den `key`s aus `fields`. `{level}` ist die Härte (`light`, `medium`, `hard`),
 `{twist}` der Vorschlag aus dem Feld `twist` des Szenarios. Das Panel sendet `[WELT · HH:MM · SCENARIO · Titel] …`.
 
+## Regeln im Panel (v1.2)
+Mehrere optionale Teile holen Spielregeln aus dem Mind ins Panel. Alle sind optional und lassen sich kombinieren.
+
+### Würfel (`roll` in einer ACTION)
+```json
+"roll": { "dice": "d20", "mod": 2, "vs": "{item.vs}", "label": "{item.label}" }
+```
+- `dice`: `d20`, `2d6+1` (1–20 Würfel, 2–1000 Seiten). `mod` addiert einen Modifikator, `vs` ist ein optionaler Zielwert. Alle drei dürfen Platzhalter wie `{item.dice|d20}` enthalten.
+- Füllt `{roll.total}`, `{roll.vs}`, `{roll.outcome}` (`SUCCESS` oder `FAILURE`, änderbar mit `success` und `failure`), `{roll.label}`, `{roll.dice}`, `{roll.rolls}` und `{roll.text}` (zum Beispiel `14 vs 12 · SUCCESS`).
+- Typisch: `"parts": ["ROLL", "{roll.label}", "{roll.text}"]` ergibt `[PRÄFIX · 21:40 · ROLL · Schleichen · 14 vs 12 · SUCCESS]`.
+- Das Panel listet die letzten Würfe (*WÜRFE*). Ein *Würfel-Seed* in den Einstellungen macht Würfe wiederholbar.
+- `ROLL`-Zeilen im `convention`-Text erklären, damit das Mind das Ergebnis beachtet.
+
+### Zufallstabellen (`tables` und `table` in einer ACTION)
+```json
+"tables": { "weather": { "label": "Wetter", "entries": ["Regen", { "text": "Sturm", "weight": 3 }] } }
+```
+Eine Aktion mit `"table": "weather"` wählt einen Eintrag (`weight` ist standardmäßig 1) und füllt `{table}`. Kürzer geht eine einfache Liste: `"weather": ["Regen", "Nebel"]`.
+
+### Geplante Ereignisse (`events`)
+```json
+"events": [
+  { "id": "sms1", "at": "22:00", "kind": "SMS", "who": "Mara", "text": "Kommst du noch?" },
+  { "id": "rain", "in": 60, "kind": "WEATHER", "text": "Es beginnt zu regnen." }
+]
+```
+- Genau eines von `at` (Uhrzeit) oder `in` (Minuten nach der Uhr beim Start der Ereignisse; *EREIGNISSE NEU STARTEN* setzt sie zurück). `daily: true` wiederholt das Ereignis jeden Tag.
+- Passiert die Spielzeit die Uhrzeit (Zeit-Buttons, *Senden* oder die Uhr aus der Statuszeile), wird das Ereignis als `WORLD`-Zeile mit seiner eigenen Zeit **eingereiht**. Es wird nie von selbst gesendet.
+- Die Uhr von Hand zu tippen und Sprünge über 18 Stunden lösen nichts aus. Das Panel listet offene Ereignisse mit *JETZT* und Überspringen.
+- `kind` bleibt ein einfacher String (Protokoll), `text` darf übersetzt sein.
+
+### Spielzustand (`variables`)
+```json
+"variables": {
+  "hp":    { "label": "HP", "value": 8, "min": 0, "max": 10, "icon": "❤" },
+  "gold":  { "label": "Gold", "value": 60, "min": 0 },
+  "items": { "type": "list", "label": "Rucksack", "value": ["Seil"] }
+}
+```
+- Typen: `number` (Standard, optional `min`, `max`) und `list` (Strings). Namen: `hp`, `money`, `itemList` (Buchstaben, Ziffern, `_`).
+- Eine ACTION ändert sie mit `set`, `add` (Zahlen) und `push`, `remove` (Listen). Werte dürfen Platzhalter enthalten, zum Beispiel `"add": { "gold": "-{item.price}" }`, `"push": { "items": "{item.thing}" }`.
+- Eine Änderung unter `min` oder über `max` wird mit einer Meldung blockiert, und nichts wird eingereiht. Auch das Entfernen von etwas, das nicht in der Liste steht, wird blockiert.
+- Änderungen passieren beim Einreihen; die Zeile aus der Queue zu löschen macht sie nicht rückgängig (Wert im Kasten *SPIELZUSTAND* korrigieren).
+- Jede Nachricht bekommt am Ende eine Zustandszeile, zum Beispiel `[WORLD · 21:40 · STATE] HP 8/10 · Gold 60 · Rucksack: Seil`. `stateLine` ersetzt sie durch eine eigene Vorlage (`{hp}`, `{hpMax}`, `{items}`); im Kasten lässt sie sich abschalten.
+- Die Werte erscheinen im HUD, zählen bei `when`-Bedingungen mit und gehören zu Spielständen und Sitzungs-Export.
+- Der Konventionstext sollte sagen, dass die `STATE`-Zeile verbindlich ist.
+
+### Buttons aus Listen (`itemsFrom`)
+```json
+{ "type": "grid", "cap": "BENUTZEN", "itemsFrom": "items", "empty": "(der Rucksack ist leer)",
+  "action": { "who": "actor", "parts": ["USE"], "body": ["{item}"], "remove": { "items": "{item}" } } }
+```
+- `itemsFrom` nennt eine Listen-Variable oder eine aus der Statuszeile gelesene Liste. Ein Button pro Eintrag, neu aufgebaut, wenn sich die Liste ändert. `items` und `itemsFrom` lassen sich kombinieren; `empty` erscheint, wenn es keine Buttons gibt.
+- Listen aus der Statuszeile: `state.lists`: `{ "key": "seen", "regex": "Seen:\\s*([^·\\n]+)", "sep": "," }`. Gruppe 1 wird an `sep` (Standard `,`) getrennt.
+- `when` kennt `{ "key": "items", "has": "key" }` für Listen (und Text, der ein Wort enthält).
+
 ## Bedingungen (`when`)
 Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben. Sie wird gegen die zuletzt gelesene Statuszeile
 (die HUD-Werte) geprüft, so erscheinen Buttons nur, wenn sie sinnvoll sind:
@@ -106,8 +162,8 @@ Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben
 { "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
 ```
 
-- `key` ist ein Status-Schlüssel (ein `parts`-, `numbers`- oder `meters`-Schlüssel aus `state`, dazu `time`; Meter haben auch `<key>Max`).
-- Genau ein Operator je Bedingung: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (Zahlen oder Text), `match` (regulärer Ausdruck), `exists` (`true`/`false`).
+- `key` ist ein Status-Schlüssel (ein `parts`-, `numbers`-, `meters`- oder `lists`-Schlüssel aus `state`, dazu `time`; Meter haben auch `<key>Max`) oder eine Variable aus `variables`. Variablen zählen immer und haben Vorrang vor einem Status-Schlüssel gleichen Namens.
+- Genau ein Operator je Bedingung: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (Zahlen oder Text), `match` (regulärer Ausdruck), `has` (Liste enthält einen Wert oder Text enthält ein Wort), `exists` (`true`/`false`).
 - Verknüpfen mit `all` (und), `any` (oder) und `not`.
 - Solange noch keine Statuszeile gelesen wurde, ist alles sichtbar. Ein fehlender Wert macht die Bedingung falsch (außer `exists: false`).
 - Wird der offene Reiter ausgeblendet, wechselt das Panel zum ersten sichtbaren Reiter.

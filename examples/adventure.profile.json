@@ -1,0 +1,432 @@
+{
+  "id": "adventure",
+  "name": {
+    "en": "Treasure Hunt",
+    "de": "Schatzsuche"
+  },
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Treasure|Schatz",
+  "defaultTime": "09:00",
+  "prefixes": {
+    "actor": "EXPLORER",
+    "world": "WORLD"
+  },
+  "settingsLabels": {
+    "actor": {
+      "en": "Prefix explorer",
+      "de": "Präfix Forscher"
+    },
+    "world": {
+      "en": "Prefix world",
+      "de": "Präfix Welt"
+    }
+  },
+  "theme": {
+    "fg": "#e0b45a",
+    "dim": "#a07a30",
+    "mut": "#8a7a5a",
+    "line": "#4a3a1c",
+    "bg": "#0d0a05",
+    "bg2": "#171108",
+    "deep": "#070502",
+    "ink": "#1c1405",
+    "warn": "#ffcc66",
+    "err": "#ff5252",
+    "txt": "#f3e3c0",
+    "glow": "224,180,90"
+  },
+  "header": {
+    "logo": "T R E A S U R E",
+    "meta": [
+      [
+        "DAY",
+        "{sid}"
+      ]
+    ],
+    "prompt": "explorer@island:~#"
+  },
+  "eventKinds": {
+    "MOVE": "#e0b45a",
+    "ROLL": "#6cc8ff",
+    "FIND": "#5fe08a",
+    "BUY": "#ffcc66",
+    "USE": "#c79bff",
+    "REST": "#8a93a3",
+    "WEATHER": "#778899",
+    "TRADER": "#ff8a5c",
+    "STATE": "#8a7a5a"
+  },
+  "variables": {
+    "hp": {
+      "label": "HP",
+      "value": 8,
+      "min": 0,
+      "max": 10,
+      "icon": "❤"
+    },
+    "gold": {
+      "label": {
+        "en": "Gold",
+        "de": "Gold"
+      },
+      "value": 60,
+      "min": 0,
+      "icon": "🪙"
+    },
+    "items": {
+      "type": "list",
+      "label": {
+        "en": "Pack",
+        "de": "Rucksack"
+      },
+      "value": [
+        "rope"
+      ]
+    }
+  },
+  "tables": {
+    "find": {
+      "label": {
+        "en": "Find",
+        "de": "Fund"
+      },
+      "entries": [
+        {
+          "en": "a rusty key",
+          "de": "ein rostiger Schlüssel"
+        },
+        {
+          "en": "an old coin",
+          "de": "eine alte Münze"
+        },
+        {
+          "text": {
+            "en": "nothing but sand",
+            "de": "nichts als Sand"
+          },
+          "weight": 3
+        }
+      ]
+    },
+    "weather": {
+      "label": {
+        "en": "Weather",
+        "de": "Wetter"
+      },
+      "entries": [
+        {
+          "en": "a light breeze",
+          "de": "eine leichte Brise"
+        },
+        {
+          "en": "heavy fog",
+          "de": "dichter Nebel"
+        },
+        {
+          "en": "a sudden downpour",
+          "de": "ein plötzlicher Regenguss"
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "id": "trader",
+      "at": "11:00",
+      "kind": "TRADER",
+      "who": "Old Sam",
+      "text": {
+        "en": "A trader waves from the beach and offers a map.",
+        "de": "Ein Händler winkt vom Strand und bietet eine Karte an."
+      }
+    },
+    {
+      "id": "dusk",
+      "in": 660,
+      "kind": "WEATHER",
+      "text": {
+        "en": "The sun sets and it gets cold.",
+        "de": "Die Sonne geht unter, es wird kalt."
+      }
+    }
+  ],
+  "stateLine": "[WORLD · STATE] HP {hp}/{hpMax} · Gold {gold} · Pack: {items}",
+  "convention": {
+    "en": "Lines starting with \"{hp}\" are the explorer's actions. Lines starting with \"{wp}\" are events in the world; a line with STATE contains the authoritative values (HP, gold, pack): never change them yourself. ROLL lines contain a dice result: respect it. Time is in-world time. End every reply with: ⏱ HH:MM · 📍 place",
+    "de": "Zeilen mit \"{hp}\" sind Handlungen des Forschers. Zeilen mit \"{wp}\" sind Ereignisse in der Welt; eine Zeile mit STATE enthält die verbindlichen Werte (HP, Gold, Rucksack): ändere sie nie selbst. ROLL-Zeilen enthalten ein Würfelergebnis: halte dich daran. Die Zeit ist die Spielzeit. Beende jede Antwort mit: ⏱ HH:MM · 📍 Ort"
+  },
+  "tabs": [
+    {
+      "id": "explore",
+      "label": {
+        "en": "EXPLORE",
+        "de": "ERKUNDEN"
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": {
+            "en": "MOVE",
+            "de": "BEWEGEN"
+          },
+          "items": [
+            {
+              "en": "Follow the beach",
+              "de": "Dem Strand folgen"
+            },
+            {
+              "en": "Enter the jungle",
+              "de": "Den Dschungel betreten"
+            },
+            {
+              "en": "Climb the hill",
+              "de": "Den Hügel besteigen"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "MOVE"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "TRY IT (DICE)",
+            "de": "VERSUCHEN (WÜRFEL)"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Sneak past",
+                "de": "Vorbeischleichen"
+              },
+              "vs": 12
+            },
+            {
+              "label": {
+                "en": "Climb the cliff",
+                "de": "Die Klippe erklimmen"
+              },
+              "vs": 15
+            },
+            {
+              "label": {
+                "en": "Pick the lock",
+                "de": "Das Schloss knacken"
+              },
+              "vs": 14,
+              "when": {
+                "key": "items",
+                "has": "key"
+              }
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "ROLL",
+              "{roll.label}",
+              "{roll.text}"
+            ],
+            "roll": {
+              "dice": "d20",
+              "mod": 0,
+              "vs": "{item.vs}",
+              "label": "{item.label}"
+            }
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "LOOK AROUND",
+            "de": "UMSEHEN"
+          },
+          "items": [
+            {
+              "en": "Search the area",
+              "de": "Die Gegend absuchen"
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "FIND"
+            ],
+            "body": [
+              "{table}"
+            ],
+            "table": "find"
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "WORLD",
+            "de": "WELT"
+          },
+          "items": [
+            {
+              "en": "Let the weather change",
+              "de": "Das Wetter wechseln lassen"
+            }
+          ],
+          "action": {
+            "who": "world",
+            "parts": [
+              "WEATHER"
+            ],
+            "body": [
+              "{table}"
+            ],
+            "table": "weather"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pack",
+      "label": {
+        "en": "PACK",
+        "de": "RUCKSACK"
+      },
+      "blocks": [
+        {
+          "type": "hint",
+          "text": {
+            "en": "One button per item in your pack. Using an item removes it.",
+            "de": "Ein Button pro Gegenstand im Rucksack. Benutzen entfernt ihn."
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "USE",
+            "de": "BENUTZEN"
+          },
+          "itemsFrom": "items",
+          "empty": {
+            "en": "(the pack is empty)",
+            "de": "(der Rucksack ist leer)"
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "USE"
+            ],
+            "body": [
+              "{item}"
+            ],
+            "remove": {
+              "items": "{item}"
+            }
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "REST",
+            "de": "RASTEN"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Rest (+2 HP)",
+                "de": "Rasten (+2 HP)"
+              },
+              "m": 60
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "REST"
+            ],
+            "body": [
+              "{item.label}"
+            ],
+            "add": {
+              "hp": 2
+            },
+            "shift": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "shop",
+      "label": {
+        "en": "TRADER",
+        "de": "HÄNDLER"
+      },
+      "when": {
+        "key": "gold",
+        "gt": 0
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": {
+            "en": "BUY",
+            "de": "KAUFEN"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Map (30)",
+                "de": "Karte (30)"
+              },
+              "price": 30,
+              "thing": {
+                "en": "map",
+                "de": "Karte"
+              }
+            },
+            {
+              "label": {
+                "en": "Torch (10)",
+                "de": "Fackel (10)"
+              },
+              "price": 10,
+              "thing": {
+                "en": "torch",
+                "de": "Fackel"
+              }
+            },
+            {
+              "label": {
+                "en": "Potion (45)",
+                "de": "Trank (45)"
+              },
+              "price": 45,
+              "thing": {
+                "en": "potion",
+                "de": "Trank"
+              }
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "BUY",
+              "{item.thing}"
+            ],
+            "add": {
+              "gold": "-{item.price}"
+            },
+            "push": {
+              "items": "{item.thing}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

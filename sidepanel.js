@@ -21,6 +21,12 @@ let whenEls = [];        // [{ el, cond }]
 let historyFilter = '';
 let editing = false;     // Profil-Editor offen: keine automatische Mind-Erkennung
 let previewing = false;  // Entwurf wird angezeigt: nichts darf gespeichert werden
+let vars = {};           // Spielzustand des Panels: { hp: 5, items: ['key'] }
+let rollLog = [];        // letzte Würfe [{ at, text }]
+let evDone = [];         // IDs ausgelöster Ereignisse
+let evStart = '';        // Uhr beim Start der Ereignisse (Bezug für "in")
+let dynGrids = [];       // Funktionen, die Buttons aus Listen neu aufbauen
+let rng = Math.random;
 const HISTORY_MAX = 100;
 
 const key = (s) => `${profile.id}:${s}`;
@@ -34,8 +40,8 @@ function line(prefix, parts, body) {
 }
 
 /* ---------- Speicher ---------- */
-const DATA_IDS = ['time', 'hprefix', 'wprefix', 'advance', 'order'];
-const DATA_CHECKS = ['append', 'autosend', 'instant'];
+const DATA_IDS = ['time', 'hprefix', 'wprefix', 'advance', 'order', 'seed'];
+const DATA_CHECKS = ['append', 'autosend', 'instant', 'sendState'];
 
 async function loadProfileData() {
   const s = await chrome.storage.local.get([key('data'), key('theme'), key('gameState'), key('favs'), key('slots')]);
@@ -48,6 +54,13 @@ async function loadProfileData() {
   $('append').checked = d.append !== undefined ? d.append : true;
   $('autosend').checked = !!d.autosend;
   $('instant').checked = !!d.instant;
+  $('sendState').checked = d.sendState !== undefined ? d.sendState : true;
+  $('seed').value = d.seed || '';
+  setSeed($('seed').value);
+  vars = initVars(d.vars);
+  rollLog = d.rollLog || [];
+  evDone = d.evDone || [];
+  evStart = d.evStart || clock();
   $('userText').value = '';
   history = d.history || [];
   queue = d.queue || [];
@@ -61,11 +74,14 @@ async function loadProfileData() {
   renderHud(s[key('gameState')]);
   renderFavs();
   renderSlots();
+  renderVars();
+  renderEvents();
+  renderRolls();
 }
 
 function save() {
   if (!profile || previewing) return;
-  const d = { history, queue, customScenarios };
+  const d = { history, queue, customScenarios, vars, rollLog, evDone, evStart };
   DATA_IDS.forEach((id) => { d[id] = $(id).value; });
   DATA_CHECKS.forEach((id) => { d[id] = $(id).checked; });
   chrome.storage.local.set({ [key('data')]: d });
@@ -82,9 +98,13 @@ function clockMinutes() {
   return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0;
 }
 
+const hhmmOf = (total) => `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+
 function shiftTime(minutes) {
-  const total = (clockMinutes() + Math.ceil(minutes) + 1440 * 10) % 1440;
-  $('time').value = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  const before = clockMinutes();
+  const total = (before + Math.ceil(minutes) + 1440 * 10) % 1440;
+  $('time').value = hhmmOf(total);
+  fireEvents(before, total);
   renderPreview();
   save();
 }
@@ -125,9 +145,12 @@ function renderQueue() {
 function buildMessage() {
   const ev = queue.join('\n');
   const user = $('userText').value.trim();
-  if (!ev) return user;
-  if (!user) return ev;
-  return $('order').value === 'userFirst' ? `${user}\n\n${ev}` : `${ev}\n\n${user}`;
+  let body;
+  if (!ev) body = user;
+  else if (!user) body = ev;
+  else body = $('order').value === 'userFirst' ? `${user}\n\n${ev}` : `${ev}\n\n${user}`;
+  const sl = body ? stateLine() : '';
+  return sl ? `${body}\n\n${sl}` : body;
 }
 
 function renderPreview() { $('preview').textContent = buildMessage() || t('preview.empty'); }
@@ -213,7 +236,7 @@ function renderSlots() {
   if (!slots.length) ul.appendChild(h('li', 'empty', t('slots.none')));
 }
 
-const snapshot = (name) => ({ name, at: Date.now(), time: clock(), queue: [...queue], history: history.map((e) => ({ ...e })), userText: $('userText').value });
+const snapshot = (name) => ({ name, at: Date.now(), time: clock(), queue: [...queue], history: history.map((e) => ({ ...e })), userText: $('userText').value, vars: clone(vars), evDone: [...evDone], evStart });
 
 function saveSlot() {
   const name = $('slotName').value.trim();
@@ -235,6 +258,12 @@ function loadSlot(s) {
   queue = [...s.queue];
   history = s.history.map((e) => ({ ...e }));
   $('userText').value = s.userText || '';
+  if (s.vars) vars = initVars(s.vars);
+  evDone = s.evDone ? [...s.evDone] : evDone;
+  evStart = s.evStart || evStart;
+  renderVars();
+  renderHud(lastState);
+  renderEvents();
   renderQueue();
   renderHistory();
   renderSlots();
@@ -432,6 +461,8 @@ function sessionData() {
     state: lastState || null,
     history: [...history].reverse().map((e) => ({ at: e.at ? new Date(e.at).toISOString() : null, pinned: !!e.pin, text: e.text })),
     queue: [...queue],
+    variables: clone(vars),
+    rolls: rollLog.map((r) => ({ at: new Date(r.at).toISOString(), text: r.text })),
     favorites: favs.map((f) => ({ name: f.name, lines: f.lines })),
   };
 }
@@ -532,12 +563,225 @@ function runAction(a, scope) {
     if (scope.item.until) { minutes = minutesUntil(scope.item.until); scope.until_minutes = minutes; }
     else minutes = scope.item.m || 0;
   }
+  // Würfel und Zufallstabellen (nach den Pflichtfeldern, damit ein Fehler keinen Wurf verbraucht)
+  const logs = [];
+  if (a.roll) {
+    const r = doRoll(a.roll, scope);
+    if (!r) return status(t('roll.bad'), false);
+    scope.roll = r;
+    logs.push(r.label ? `${r.label} · ${r.text}` : r.text);
+  }
+  if (a.table) {
+    const pick = pickTable(a.table, scope);
+    if (pick == null) return status(t('table.missing', { name: a.table }), false);
+    scope.table = pick.text;
+    logs.push(`${pick.name}: ${pick.text}`);
+  }
   const body = P.segments(a.body, scope);
   // "raw": reiner Text ohne [PRÄFIX · Uhrzeit …]-Klammer, z. B. für Slash-Befehle.
   const text = a.format === 'raw'
     ? [P.parts(a.parts, scope).join(' '), body].filter(Boolean).join(' ')
     : line(a.who === 'world' ? wp() : hp(), P.parts(a.parts, scope), body);
+  if (!applyEffects(a, scope)) return null;
+  logs.forEach((l) => rollLog.unshift({ at: Date.now(), text: l }));
+  if (logs.length) { rollLog = rollLog.slice(0, 20); renderRolls(); }
   return a.shift && minutes ? { text, shift: minutes } : text;
+}
+
+/* ---------- Würfel und Zufallstabellen ---------- */
+function setSeed(s) {
+  s = String(s || '').trim();
+  if (!s) { rng = Math.random; return; }
+  let hsh = 2166136261;
+  for (const c of s) { hsh ^= c.charCodeAt(0); hsh = Math.imul(hsh, 16777619); }
+  let a = hsh >>> 0;
+  rng = () => { // mulberry32: gleicher Seed, gleiche Würfe
+    a = (a + 0x6D2B79F5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function doRoll(spec, scope) {
+  const P = MindProfiles;
+  const f = (v) => (v == null ? '' : P.fill(String(v), scope).text.trim());
+  const d = P.parseDice(f(spec.dice) || 'd20');
+  if (!d) return null;
+  const mod = d.mod + (parseInt(f(spec.mod), 10) || 0);
+  const rolls = Array.from({ length: d.n }, () => 1 + Math.floor(rng() * d.sides));
+  const total = rolls.reduce((x, y) => x + y, 0) + mod;
+  const vsRaw = f(spec.vs);
+  const vs = vsRaw === '' || Number.isNaN(parseInt(vsRaw, 10)) ? null : parseInt(vsRaw, 10);
+  const outcome = vs == null ? '' : total >= vs ? (spec.success || 'SUCCESS') : (spec.failure || 'FAILURE');
+  const dice = `${d.n}d${d.sides}${mod ? (mod > 0 ? '+' : '') + mod : ''}`;
+  const text = [vs == null ? String(total) : `${total} vs ${vs}`, outcome].filter(Boolean).join(' · ');
+  return { total, vs: vs == null ? '' : vs, outcome, label: f(spec.label), dice, rolls: rolls.join('+'), text };
+}
+
+function pickTable(name, scope) {
+  const key = MindProfiles.fill(String(name), scope).text.trim();
+  const tb = (profile.tables || {})[key];
+  if (!tb) return null;
+  const ents = (Array.isArray(tb) ? tb : tb.entries).map((e) => (typeof e === 'string' ? { text: e, weight: 1 } : { text: e.text, weight: e.weight || 1 }));
+  let r = rng() * ents.reduce((s, e) => s + e.weight, 0);
+  for (const e of ents) { r -= e.weight; if (r < 0) return { name: (tb.label || key), text: e.text }; }
+  return { name: (tb.label || key), text: ents[ents.length - 1].text };
+}
+
+function renderRolls() {
+  const ul = $('rollList');
+  ul.innerHTML = '';
+  $('rollBox').hidden = !rollLog.length;
+  rollLog.slice(0, 10).forEach((r) => { const li = h('li'); li.append(h('span', 'htime', hhmm(r.at)), h('span', null, r.text)); ul.appendChild(li); });
+}
+
+/* ---------- Spielzustand (Variablen) ---------- */
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+function initVars(saved) {
+  const out = {};
+  Object.entries(profile.variables || {}).forEach(([k, sp]) => {
+    const s = saved && saved[k];
+    const list = sp.type === 'list';
+    out[k] = list ? (Array.isArray(s) ? s.slice() : clone(sp.value)) : (typeof s === 'number' ? s : sp.value);
+  });
+  return out;
+}
+
+const varLabel = (k) => (profile.variables[k].label || k);
+const varShow = (k) => {
+  const sp = profile.variables[k];
+  const v = vars[k];
+  if (sp.type === 'list') return v.length ? v.join(', ') : '—';
+  return `${v}${sp.max != null ? '/' + sp.max : ''}`;
+};
+
+function stateLine() {
+  if (!profile || !profile.variables || !$('sendState').checked) return '';
+  const keys = Object.keys(profile.variables);
+  if (!keys.length) return '';
+  if (profile.stateLine) {
+    const scope = {};
+    keys.forEach((k) => { scope[k] = Array.isArray(vars[k]) ? vars[k].join(', ') : vars[k]; scope[k + 'Max'] = profile.variables[k].max; });
+    return MindProfiles.fill(profile.stateLine, scope).text;
+  }
+  return line(wp(), ['STATE'], keys.map((k) => (profile.variables[k].type === 'list' ? `${varLabel(k)}: ${varShow(k)}` : `${varLabel(k)} ${varShow(k)}`)).join(' · '));
+}
+
+// Wendet set/add/push/remove an. Prüft die Grenzen, bevor etwas geändert wird.
+function applyEffects(a, scope) {
+  if (!profile.variables || !(a.set || a.add || a.push || a.remove)) return true;
+  const spec = profile.variables;
+  const next = clone(vars);
+  const val = (v) => (typeof v === 'number' ? String(v) : MindProfiles.fill(String(v), scope).text.trim());
+  const num = (v) => { const n = parseFloat(val(v).replace(',', '.')); return Number.isNaN(n) ? null : n; };
+  const touched = new Set();
+  for (const [k, v] of Object.entries(a.set || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] = n; touched.add(k); }
+  for (const [k, v] of Object.entries(a.add || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] += n; touched.add(k); }
+  for (const [k, v] of Object.entries(a.push || {})) { const s = val(v); if (s) next[k].push(s); touched.add(k); }
+  for (const [k, v] of Object.entries(a.remove || {})) {
+    const s = val(v).toLowerCase();
+    const i = next[k].findIndex((x) => x.toLowerCase() === s);
+    if (i < 0) return status(t('var.notIn', { item: val(v), label: varLabel(k) }), false);
+    next[k].splice(i, 1); touched.add(k);
+  }
+  for (const k of touched) {
+    const sp = spec[k];
+    if (sp.type === 'list') continue;
+    if (sp.min != null && next[k] < sp.min) return status(t('var.below', { label: varLabel(k), min: sp.min }), false);
+    if (sp.max != null && next[k] > sp.max) return status(t('var.above', { label: varLabel(k), max: sp.max }), false);
+  }
+  vars = next;
+  commitVars();
+  return true;
+}
+
+// Nach jeder Änderung: HUD, Bedingungen, dynamische Buttons, Vorschau, Speicher.
+function commitVars() {
+  renderVars();
+  renderHud(lastState);
+  renderPreview();
+  save();
+}
+
+function renderVars() {
+  const box = $('varsList');
+  box.innerHTML = '';
+  const keys = Object.keys((profile && profile.variables) || {});
+  $('varsBox').hidden = !keys.length;
+  keys.forEach((k) => {
+    const sp = profile.variables[k];
+    const label = h('label');
+    const input = h('input');
+    if (sp.type === 'list') {
+      input.value = vars[k].join(', ');
+      input.placeholder = t('vars.listPh');
+      input.onchange = () => { vars[k] = input.value.split(',').map((s) => s.trim()).filter(Boolean); commitVars(); };
+    } else {
+      input.type = 'number';
+      if (sp.min != null) input.min = sp.min;
+      if (sp.max != null) input.max = sp.max;
+      input.value = vars[k];
+      input.onchange = () => {
+        const n = parseFloat(input.value);
+        if (Number.isNaN(n) || (sp.min != null && n < sp.min) || (sp.max != null && n > sp.max)) { input.value = vars[k]; return status(t('vars.invalid', { label: varLabel(k) }), false); }
+        vars[k] = n; commitVars();
+      };
+    }
+    label.append(h('span', null, varLabel(k)), input);
+    box.appendChild(label);
+  });
+}
+
+/* ---------- Geplante Ereignisse ---------- */
+const toMin = (hhmmStr) => { const m = /^(\d{1,2}):(\d{2})$/.exec(hhmmStr || ''); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null; };
+const evAbs = (e) => (e.at ? toMin(e.at) : ((toMin(evStart) || 0) + e.in) % 1440);
+const evPending = () => (profile.events || []).filter((e) => e.daily || !evDone.includes(e.id));
+const evLine = (e) => `[${[wp(), profile.clock === false ? '' : hhmmOf(evAbs(e)), e.kind, e.who].filter(Boolean).join(' · ')}] ${e.text}`;
+
+function queueEvents(list) {
+  list.forEach((e) => { if (!e.daily && !evDone.includes(e.id)) evDone.push(e.id); });
+  stageMany(list.map(evLine));
+  renderEvents();
+  save();
+}
+
+// Löst Ereignisse aus, deren Zeit zwischen den beiden Uhrzeiten liegt. Sprünge über 18 Stunden gelten als Zurücksetzen.
+function fireEvents(from, to) {
+  if (!profile || !profile.events || from == null || to == null) return;
+  const delta = (to - from + 1440) % 1440;
+  if (!delta || delta > 18 * 60) return;
+  const due = evPending().map((e) => ({ e, off: (evAbs(e) - from + 1440) % 1440 })).filter((x) => x.off > 0 && x.off <= delta).sort((x, y) => x.off - y.off).map((x) => x.e);
+  if (due.length) { queueEvents(due); status(t('events.queued', { n: due.length })); }
+}
+
+function renderEvents() {
+  const ul = $('eventsList');
+  ul.innerHTML = '';
+  $('eventsBox').hidden = !(profile && profile.events && profile.events.length);
+  if (!profile || !profile.events) return;
+  const pend = evPending().sort((x, y) => ((evAbs(x) - clockMinutes() + 1440) % 1440) - ((evAbs(y) - clockMinutes() + 1440) % 1440));
+  pend.forEach((e) => {
+    const li = h('li');
+    li.append(h('span', null, `${hhmmOf(evAbs(e))} · ${e.kind}${e.who ? ' · ' + e.who : ''} · ${e.text}`));
+    const go = h('button', null, t('events.fire'));
+    go.title = t('events.fireTitle');
+    go.onclick = () => { queueEvents([e]); status(t('events.queued', { n: 1 })); };
+    const skip = h('button', null, '×');
+    skip.title = t('events.skip');
+    skip.onclick = () => { if (!e.daily) evDone.push(e.id); renderEvents(); save(); };
+    li.append(go, skip);
+    ul.appendChild(li);
+  });
+  if (!pend.length) ul.appendChild(h('li', 'empty', t('events.none')));
+}
+
+// Liste für itemsFrom: zuerst eine Listen-Variable, sonst eine Liste aus der Statuszeile.
+function listFor(key) {
+  if (profile.variables && profile.variables[key]) return vars[key] || [];
+  const v = lastState && lastState[key];
+  return Array.isArray(v) ? v : [];
 }
 
 function setTab(id) {
@@ -547,8 +791,21 @@ function setTab(id) {
 }
 
 /* ---------- Bedingungen ("when") ---------- */
+// Zustand für "when": Statuszeile plus die Variablen des Panels (Variablen gelten immer).
+function whenState() {
+  const hasVars = profile && profile.variables;
+  if (lastState == null && !hasVars) return null;
+  return { ...(lastState || {}), ...(hasVars ? vars : {}) };
+}
+
+function refreshDynamic() {
+  dynGrids.forEach((f) => f());
+  applyWhen();
+}
+
 function applyWhen() {
-  whenEls.forEach(({ el, cond }) => { el.hidden = !MindProfiles.test(cond, lastState); });
+  const ws = whenState();
+  whenEls.forEach(({ el, cond }) => { el.hidden = !MindProfiles.test(cond, ws); });
   const active = document.querySelector('.tab.active');
   if (active && active.hidden) {
     const first = [...document.querySelectorAll('.tab')].find((b) => !b.hidden);
@@ -639,12 +896,24 @@ function renderBlockInner(tab, b) {
   } else if (b.type === 'grid') {
     el.appendChild(h('div', 'cap', b.cap));
     const grid = h('div', 'grid');
-    b.items.forEach((it) => {
-      const btn = h('button', null, typeof it === 'string' ? it : it.label);
-      btn.onclick = () => afterMake(tab, runAction(b.action, { item: it, field: tabVals(tab) }));
-      if (it && it.when) whenEls.push({ el: btn, cond: it.when });
-      grid.appendChild(btn);
-    });
+    const mine = [];
+    // Baut die Buttons aus items und (optional) itemsFrom, einer Liste aus Variablen oder der Statuszeile.
+    const build = () => {
+      whenEls = whenEls.filter((w) => !mine.includes(w.el));
+      mine.length = 0;
+      grid.innerHTML = '';
+      const dyn = b.itemsFrom ? listFor(b.itemsFrom) : [];
+      const all = [...(b.items || []), ...dyn];
+      all.forEach((it) => {
+        const btn = h('button', null, typeof it === 'string' ? it : it.label);
+        btn.onclick = () => afterMake(tab, runAction(b.action, { item: it, field: tabVals(tab) }));
+        if (it && it.when) { whenEls.push({ el: btn, cond: it.when }); mine.push(btn); }
+        grid.appendChild(btn);
+      });
+      if (!all.length && b.empty) grid.appendChild(h('p', 'hint', b.empty));
+    };
+    build();
+    if (b.itemsFrom) dynGrids.push(build);
     el.appendChild(grid);
   } else if (b.type === 'compose') {
     renderCompose(tab, b);
@@ -868,6 +1137,7 @@ function renderTabs() {
   panels.innerHTML = '';
   tabs = [];
   whenEls = [];
+  dynGrids = [];
   profile.tabs.forEach((def) => {
     const btn = h('button', 'tab', def.label);
     btn.dataset.tab = def.id;
@@ -898,9 +1168,11 @@ function saveTheme() {
 function renderHud(st) {
   const hud = $('hud');
   lastState = st || null;
-  applyWhen();
-  $('statusRight').textContent = profile.statusRight ? MindProfiles.fill(profile.statusRight, st || {}).text : '';
-  if (!st || !st.time) { hud.hidden = true; return; }
+  refreshDynamic();
+  $('statusRight').textContent = profile.statusRight ? MindProfiles.fill(profile.statusRight, { ...(st || {}), ...vars }).text : '';
+  const vk = Object.keys(profile.variables || {});
+  const vtext = vk.map((k) => `${profile.variables[k].icon ? profile.variables[k].icon + ' ' : ''}${varLabel(k)} ${varShow(k)}`).join(' · ');
+  if (!st || !st.time) { hud.textContent = vtext; hud.hidden = !vtext; return; }
   const spec = profile.state || {};
   const parts = [`⏱ ${st.time}`];
   (spec.parts || []).forEach((p) => { if (st[p.key]) parts.push(`${p.icon} ${st[p.key]}`); });
@@ -911,14 +1183,14 @@ function renderHud(st) {
     const max = st[m.key + 'Max'] || m.max || 4;
     text += ` · ${m.label} ${'▮'.repeat(st[m.key])}${'▯'.repeat(Math.max(0, max - st[m.key]))} ${st[m.key]}/${max}`;
   });
-  hud.textContent = text;
+  hud.textContent = vtext ? `${text} · ${vtext}` : text;
   hud.hidden = false;
 }
 
 function applyState(st) {
   renderHud(st);
   if (!$('thSync').checked || !st) return;
-  if (st.time) $('time').value = st.time;
+  if (st.time) { const before = clockMinutes(); $('time').value = st.time; fireEvents(before, clockMinutes()); }
   renderPreview();
   save();
 }
@@ -1000,6 +1272,9 @@ async function refreshMind() {
 /* ---------- Start ---------- */
 function initStatic() {
   document.querySelectorAll('[data-add]').forEach((b) => (b.onclick = () => shiftTime(parseInt(b.dataset.add, 10))));
+  $('seed').addEventListener('change', () => { setSeed($('seed').value); save(); });
+  $('varsReset').onclick = () => { vars = initVars(null); commitVars(); status(t('vars.resetDone')); };
+  $('eventsRestart').onclick = () => { evDone = []; evStart = clock(); renderEvents(); save(); status(t('events.restarted')); };
   $('now').onclick = () => {
     const d = new Date();
     $('time').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -1009,6 +1284,7 @@ function initStatic() {
   ['time', 'userText', 'order', 'hprefix', 'wprefix', 'advance'].forEach((id) =>
     $(id).addEventListener('input', () => { renderPreview(); save(); }));
   DATA_CHECKS.forEach((id) => $(id).addEventListener('change', save));
+  $('sendState').addEventListener('change', renderPreview);
   Object.values(THEME_IDS).forEach((id) => $(id).addEventListener('change', saveTheme));
   $('send').onclick = send;
   $('clearQueue').onclick = () => { queue = []; $('userText').value = ''; renderQueue(); save(); status(''); };
