@@ -43,6 +43,7 @@ Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingal
 - **Spielstände.** Mehrere benannte Stände von Uhr, Queue und Verlauf pro Mind.
 - **Bedingte Buttons.** Profile können Reiter, Blöcke und Buttons abhängig von den HUD-Werten ein- und ausblenden (`when`).
 - **Profil-Editor.** Profile im Panel bearbeiten, kopieren und neu anlegen, mit Live-Prüfung und einer Vorschau, die nichts speichert.
+- **Regeln im Panel.** Würfel und Zufallstabellen, geplante Weltereignisse an die Spielzeit gebunden, Spielzustand (HP, Geld, Rucksack) mit Zustandszeile und Buttons aus Listen. Profile schalten sie ein, siehe [PROFILE-FORMAT.de.md](PROFILE-FORMAT.de.md#regeln-im-panel-v12).
 - **Relay zwischen zwei Minds.** Die letzte Antwort eines Minds in die Chatbox eines anderen kopieren (Spielleiter und Figur). Das manuelle Relay fügt nur ein; Senden ist ein eigener Schalter.
 - **Auto-Forward.** Optional: neue, fertige Antworten werden selbstständig weitergegeben und gesendet, in eine Richtung oder hin und her, mit Höchstzahl, Wartezeit, roter STOPP-Leiste und mehreren automatischen Stopps.
 - **Mehrsprachige Oberfläche.** Standard ist Englisch, Deutsch ist enthalten. Umschalten mit der Sprachauswahl oben im Panel; Profile können eigene Übersetzungen mitbringen.
@@ -195,6 +196,7 @@ i18n.js                       Oberflächentexte (Standard Englisch, Deutsch)
 profiles/registry.js          Erkennung, Prüfung, Platzhalter
 profiles/nightingale.js       eingebautes Profil
 profiles/ghostline.js         eingebautes Profil
+tests/                        Panel-Tests im Headless-Electron mit nachgebautem chrome-Objekt, siehe tests/README.md
 examples/                     Beispielprofile zum Importieren, siehe examples/README.de.md (minimal, Café, Gastgeber, Noir, Netrunner, Survival, Slash-Befehle, zwei Minds)
 AUTHOR-GUIDE(.de).md          Leitfaden: eigenes Profil bauen
 PROFILE-FORMAT(.de).md        Format der Profile (Referenz)

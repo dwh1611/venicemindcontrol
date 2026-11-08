@@ -200,3 +200,15 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
   border: 1px solid var(--err); background: #1a0606; color: var(--err); padding: 5px 8px; font-size: 11px; letter-spacing: .04em; }
 .autobar button { border-color: var(--err); color: var(--err); background: transparent; font-weight: 700; }
 .autobar button:hover { background: var(--err); color: #000; }
+
+#varsList { display: flex; flex-direction: column; gap: 6px; }
+#varsList label { flex-direction: row; align-items: center; gap: 8px; font-size: 11px; color: var(--fg); }
+#varsList label > span { flex: 0 0 38%; color: var(--mut); }
+#varsList input { flex: 1; min-width: 0; }
+#eventsList, #rollList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+#eventsList li, #rollList li { display: flex; gap: 6px; align-items: center; border-left: 2px solid var(--fg); background: var(--deep); padding: 3px 6px; font-size: 11px; word-break: break-word; }
+#eventsList li span, #rollList li span { flex: 1; }
+#eventsList li button { padding: 0 6px; }
+#eventsList li.empty, #rollList li.empty { border-left-color: var(--line); color: var(--mut); }
+#rollList li .htime { color: var(--dim); font-size: 10px; flex: 0; }
+.grid .hint { grid-column: 1 / -1; }

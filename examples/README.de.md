@@ -12,6 +12,7 @@ Eine Datei im Panel unter **PROFILE → IMPORTIEREN (.json)** importieren. Jedes
 | [`noir.profile.json`](noir.profile.json) ([EN](noir.en.profile.json)) | Agent / Detektiv | Szenarien mit Vorlage und versteckter Komplikation. |
 | [`netrunner.profile.json`](netrunner.profile.json) | Hacker (fiktiv) | Terminal-Look, Pflichtfeld, Buttons, die erst ab einem Trace-Wert erscheinen (`when`). |
 | [`survival.profile.json`](survival.profile.json) | Überlebensspiel | HUD-Werte sowie bedingte Buttons und Reiter (`when`), Zeitsprünge mit „bis zum Morgen“. |
+| [`adventure.profile.json`](adventure.profile.json) | Abenteuer mit Regeln | Die Funktionen aus v1.2 zusammen: Spielzustand (HP, Gold, Rucksack) mit Zustandszeile, Würfel mit Zielwert, Zufallstabellen, geplante Ereignisse, Buttons aus dem Rucksack, bedingte Buttons und Reiter. |
 | [`slash-commands.profile.json`](slash-commands.profile.json) | Befehle | Rohe Zeilen ohne Klammer und Uhr für Chat-Befehle. |
 | [`two-minds.profiles.json`](two-minds.profiles.json) | Zwei Minds | Zwei Profile in einer Datei (Spielleiter und Figur) mit dem Feld `relay` für das Relay zwischen zwei Tabs. |
 

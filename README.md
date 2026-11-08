@@ -46,6 +46,7 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **Saves.** Several named saves of clock, queue and history per mind.
 - **Conditional buttons.** Profiles can show tabs, blocks and buttons depending on the HUD values (`when`).
 - **Profile editor.** Edit, copy and create profiles in the panel with live validation and a preview that saves nothing.
+- **Rules in the panel.** Dice and random tables, scheduled world events tied to the in-world clock, game state (HP, money, a pack) with a state line, and buttons built from lists. Profiles switch them on, see [PROFILE-FORMAT.md](PROFILE-FORMAT.md#rules-in-the-panel-v12).
 - **Relay between two Minds.** Copy the last reply of one Mind into the chat box of another (game master and character). Manual relay only inserts; sending is a separate switch.
 - **Auto-forward.** Optional: new, finished replies are forwarded and sent on their own, one way or back and forth, with a maximum number of forwards, a settle time, a red STOP bar and several automatic stops.
 - **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
@@ -199,6 +200,7 @@ i18n.js                       interface texts (English default, German)
 profiles/registry.js          detection, validation, placeholders
 profiles/nightingale.js       built-in profile
 profiles/ghostline.js         built-in profile
+tests/                        panel tests in headless Electron with a mocked chrome object, see tests/README.md
 examples/                     example profiles to import, see examples/README.md (minimal, café, houseguest, noir, netrunner, survival, slash commands, two minds)
 AUTHOR-GUIDE(.de).md          guide: build your own profile
 PROFILE-FORMAT(.de).md        profile format (reference)

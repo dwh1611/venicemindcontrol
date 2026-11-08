@@ -102,6 +102,26 @@
         <div class="status" id="status"></div>
       </section>
 
+      <details class="settings" id="varsBox" hidden>
+        <summary data-i18n="vars.summary">GAME STATE</summary>
+        <p class="hint" data-i18n="vars.hint">These values belong to the panel. Actions change them, and a state line is added to what you send. Edit a value here if the story needs a correction.</p>
+        <div id="varsList"></div>
+        <label class="inline"><input type="checkbox" id="sendState" checked /> <span data-i18n="vars.send">add the state line to every message</span></label>
+        <button id="varsReset" data-i18n="vars.reset">RESET TO START VALUES</button>
+      </details>
+
+      <details class="settings" id="eventsBox" hidden>
+        <summary data-i18n="events.summary">SCHEDULED EVENTS</summary>
+        <p class="hint" data-i18n="events.hint">Events are queued (not sent) when the in-world clock passes their time. Typing the clock by hand does not trigger them.</p>
+        <ul id="eventsList"></ul>
+        <button id="eventsRestart" data-i18n="events.restart">RESTART EVENTS FROM THE CURRENT CLOCK</button>
+      </details>
+
+      <details class="settings" id="rollBox" hidden>
+        <summary data-i18n="roll.summary">ROLLS</summary>
+        <ul id="rollList"></ul>
+      </details>
+
       <details class="settings" id="relayBox">
         <summary data-i18n="relay.summary">RELAY BETWEEN TWO MINDS</summary>
         <p class="hint" data-i18n="relay.hint">Open two Mind chats in two tabs. Click a tab, then pick it as A or B. A relay copies the last reply of one Mind into the chat box of the other.</p>
@@ -150,6 +170,7 @@
             <option value="userFirst" data-i18n="settings.order.userFirst">My text, then actions</option>
           </select>
         </label>
+        <label><span data-i18n="settings.seed">Dice seed (empty = random)</span><input id="seed" maxlength="40" /></label>
         <div class="cols">
           <label><span id="lblActor">Prefix operator</span><input id="hprefix" /></label>
           <label><span id="lblWorld">Prefix world</span><input id="wprefix" /></label>

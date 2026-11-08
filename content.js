@@ -298,6 +298,10 @@
       const r = rx.meters[i].exec(rest);
       if (r) { state[mt.key] = parseInt(r[1], 10); state[mt.key + 'Max'] = parseInt(r[2], 10); }
     });
+    (spec.lists || []).forEach((l, i) => {
+      const r = rx.lists[i].exec(rest);
+      if (r) state[l.key] = r[1].split(l.sep || ',').map((s) => s.trim()).filter(Boolean);
+    });
     const key = JSON.stringify(state);
     if (key === lastState) return;
     lastState = key;
