@@ -1,0 +1,250 @@
+{
+  "id": "netrunner",
+  "name": "Netrunner",
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "titleMatch": "Netrunner",
+  "defaultTime": "23:00",
+  "prefixes": {
+    "actor": "RUNNER",
+    "world": "GRID"
+  },
+  "theme": {
+    "fg": "#c79bff",
+    "dim": "#8a5fd0",
+    "mut": "#8a7aa8",
+    "line": "#35254f",
+    "bg": "#0a0710",
+    "bg2": "#130d1c",
+    "deep": "#05030a",
+    "ink": "#150b24",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#e8dcff",
+    "glow": "199,155,255"
+  },
+  "header": {
+    "logo": "N E T R U N N E R",
+    "meta": [
+      [
+        "NODE",
+        "{sid} ● latency {lat} ms"
+      ],
+      [
+        "TRACE",
+        "watching"
+      ]
+    ],
+    "prompt": "runner@grid:~#"
+  },
+  "eventKinds": {
+    "SCAN": "#6cc8ff",
+    "BREACH": "#ff8a5c",
+    "ICE": "#ff5252",
+    "LOOT": "#ffcc44",
+    "LOG": "#8a7aa8"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "trace",
+        "regex": "Trace\\s*(\\d{1,3})\\s*%",
+        "icon": "👁",
+        "unit": "%"
+      }
+    ]
+  },
+  "statusRight": "👁 {trace|0}%",
+  "convention": "Lines starting with \"{hp}\" are the runner's commands, lines starting with \"{wp}\" are events on the grid (fictional game world). The time is in-world time. End every reply with one status line: ⏱ HH:MM · 📍 node · Trace 20%",
+  "tabs": [
+    {
+      "id": "recon",
+      "label": {
+        "en": "RECON",
+        "de": "AUFKLÄREN"
+      },
+      "blocks": [
+        {
+          "type": "field",
+          "id": "target",
+          "label": {
+            "en": "Target",
+            "de": "Ziel"
+          },
+          "placeholder": "node-7, relay, vault…",
+          "clear": true
+        },
+        {
+          "type": "grid",
+          "cap": "SCAN",
+          "items": [
+            "Scan ports",
+            "Map the node",
+            "Read the logs"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "SCAN"
+            ],
+            "body": [
+              "{item}",
+              "→ {field.target}"
+            ],
+            "requires": [
+              {
+                "need": "field.target",
+                "msg": {
+                  "en": "Enter a target first.",
+                  "de": "Erst ein Ziel eingeben."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "attack",
+      "label": {
+        "en": "ACT",
+        "de": "AKTION"
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": "BREACH",
+          "items": [
+            "Breach the firewall",
+            "Slip past the ICE",
+            "Copy the data"
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "BREACH"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "EMERGENCY",
+            "de": "NOTFALL"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Disconnect now",
+                "de": "Sofort trennen"
+              },
+              "when": {
+                "key": "trace",
+                "gte": 70
+              }
+            },
+            {
+              "label": {
+                "en": "Wipe traces",
+                "de": "Spuren löschen"
+              },
+              "when": {
+                "key": "trace",
+                "gte": 40
+              }
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "LOG"
+            ],
+            "body": [
+              "{item}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "grid",
+      "label": "GRID",
+      "blocks": [
+        {
+          "type": "compose",
+          "kindLabel": {
+            "en": "Type",
+            "de": "Art"
+          },
+          "whoLabel": {
+            "en": "Source",
+            "de": "Quelle"
+          },
+          "textLabel": {
+            "en": "Event",
+            "de": "Ereignis"
+          },
+          "kinds": {
+            "ICE": {
+              "label": "ICE",
+              "who": "Sentinel",
+              "text": {
+                "en": "What does the defence do?",
+                "de": "Was tut die Abwehr?"
+              },
+              "quick": [
+                {
+                  "en": "Counter-trace starts.",
+                  "de": "Gegenspur startet."
+                }
+              ]
+            },
+            "LOG": {
+              "label": "LOG",
+              "who": "System",
+              "text": {
+                "en": "System message",
+                "de": "Systemmeldung"
+              },
+              "quick": [
+                {
+                  "en": "Connection unstable.",
+                  "de": "Verbindung instabil."
+                }
+              ]
+            }
+          },
+          "action": {
+            "who": "world",
+            "parts": [
+              "{kind}",
+              "{who}"
+            ],
+            "body": [
+              "{text}"
+            ],
+            "requires": [
+              {
+                "need": "text",
+                "msg": {
+                  "en": "Event description missing.",
+                  "de": "Ereignis fehlt."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
