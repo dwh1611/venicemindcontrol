@@ -7,6 +7,10 @@
   const STRINGS = {
     en: {
       'lang.label': 'Language',
+      'full.open': 'FULL PAGE',
+      'full.openHint': 'Open the console in its own tab and keep the Mind running in the background',
+      'full.target': 'Mind tab',
+      'full.auto': 'Latest Venice tab (automatic)',
       'profiles.summary': 'PROFILES (IMPORT / EXPORT)',
       'profiles.import': 'IMPORT (.json)',
       'profiles.template': 'TEMPLATE',
@@ -220,6 +224,10 @@
 
     de: {
       'lang.label': 'Sprache',
+      'full.open': 'VOLLBILD',
+      'full.openHint': 'Die Konsole in einem eigenen Tab öffnen, das Mind läuft im Hintergrund weiter',
+      'full.target': 'Mind-Tab',
+      'full.auto': 'Letzter Venice-Tab (automatisch)',
       'profiles.summary': 'PROFILE (IMPORTIEREN / EXPORTIEREN)',
       'profiles.import': 'IMPORTIEREN (.json)',
       'profiles.template': 'VORLAGE',

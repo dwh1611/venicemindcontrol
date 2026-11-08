@@ -8,6 +8,9 @@ const h = (tag, cls, text) => {
 };
 
 /* ---------- Zustand ---------- */
+const TAB_MODE = new URLSearchParams(location.search).get('mode') === 'tab';
+if (TAB_MODE) document.body.classList.add('fullpage');
+let pinnedTab = null;    // Vollbild: festgelegter Venice-Tab (null = automatisch)
 let profile = null;
 let queue = [];
 let history = [];
@@ -492,6 +495,11 @@ const URL_PATTERNS = ['https://venice.ai/*', 'https://*.venice.ai/*'];
 async function findVeniceTab() {
   const found = await chrome.tabs.query({ url: URL_PATTERNS });
   if (!found.length) return null;
+  if (TAB_MODE && pinnedTab != null) {
+    const p = found.find((x) => x.id === pinnedTab);
+    if (p) return p;
+    pinnedTab = null; // Tab wurde geschlossen: zurück auf automatisch
+  }
   return found.find((t) => t.active && t.lastFocusedWindow) || found.find((t) => t.active) ||
     found.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
 }
@@ -505,6 +513,41 @@ async function ensureContentScript(tabId) {
       files: ['profiles/registry.js', 'profiles/nightingale.js', 'profiles/ghostline.js', 'content.js'],
     });
   }
+}
+
+/* ---------- Vollbild-Modus ---------- */
+let targetSig = '';
+async function renderTarget() {
+  if (!TAB_MODE) return;
+  $('targetBar').hidden = false;
+  const found = (await chrome.tabs.query({ url: URL_PATTERNS })).sort((a, b) => a.id - b.id);
+  if (pinnedTab != null && !found.some((x) => x.id === pinnedTab)) pinnedTab = null;
+  const sig = JSON.stringify([I18n.lang, pinnedTab, found.map((x) => [x.id, x.title])]);
+  if (sig === targetSig) return;
+  targetSig = sig;
+  const sel = $('target');
+  sel.innerHTML = '';
+  const opt = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+  sel.appendChild(opt('', t('full.auto')));
+  found.forEach((x) => sel.appendChild(opt(String(x.id), `#${x.id} · ${(x.title || x.url || '').slice(0, 60)}`)));
+  sel.value = pinnedTab == null ? '' : String(pinnedTab);
+}
+
+function initFullpage() {
+  $('openTab').onclick = async () => {
+    const tab = await findVeniceTab();
+    const q = '?mode=tab' + (tab ? '&tab=' + tab.id : '');
+    await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html' + q) });
+  };
+  if (!TAB_MODE) return;
+  const want = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  if (!isNaN(want)) pinnedTab = want;
+  $('target').onchange = () => {
+    pinnedTab = $('target').value ? parseInt($('target').value, 10) : null;
+    if (auto.on) autoStop('auto.stopped.manual'); // anderes Ziel: Automatik anhalten
+    profile = null; // Profil des neuen Tabs neu erkennen
+    refreshMind();
+  };
 }
 
 function status(msg, ok = true) {
@@ -1252,6 +1295,7 @@ async function refreshMind() {
   if (refreshing || editing) return;
   refreshing = true;
   try {
+    await renderTarget();
     const tab = await findVeniceTab();
     if (!tab) { showUnknown(null, null, t('status.noTab')); return; }
     const { mindMap } = await chrome.storage.local.get('mindMap');
@@ -1595,6 +1639,7 @@ function initLang() {
   initLang();
   setLanguage(I18n.lang);
   initStatic();
+  initFullpage();
   initProfileManager();
   initEditor();
   await refreshMind();

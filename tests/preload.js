@@ -35,9 +35,10 @@ window.chrome = {
       if (msg.type === 'inject') { window.__injected.push({ id, ...msg }); return { ok: true, sent: !!msg.send }; }
       return { ok: true };
     },
+    create: async (o) => { (window.__created = window.__created || []).push(o.url); return { id: 99 }; },
     onActivated: { addListener() {} },
     onUpdated: { addListener() {} },
   },
-  runtime: { getURL: (x) => x },
+  runtime: { getURL: (x) => 'chrome-extension://test/' + x },
   scripting: { executeScript: async () => {} },
 };
