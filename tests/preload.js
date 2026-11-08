@@ -32,6 +32,7 @@ window.chrome = {
     sendMessage: async (id, msg) => {
       if (msg.type === 'ping') return { ok: true };
       if (msg.type === 'lastReply') { const r = window.__replies[id]; return r ? { ok: true, text: r, count: 3 } : { ok: false, code: 'no_reply' }; }
+      if (msg.type === 'transcript') { const tr = (window.__transcript || {})[id]; if (!tr) return { ok: false }; const sig = tr.length + ':' + (tr[tr.length - 1] || {}).text; return msg.sig === sig ? { ok: true, same: true } : { ok: true, sig, title: 'Chat ' + id, total: tr.length, messages: tr }; }
       if (msg.type === 'inject') { window.__injected.push({ id, ...msg }); return { ok: true, sent: !!msg.send }; }
       return { ok: true };
     },

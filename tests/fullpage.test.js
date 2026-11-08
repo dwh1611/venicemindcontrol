@@ -33,6 +33,17 @@ run(async () => {
   await t(`window.__tabs=window.__tabs.filter(x=>x.id!==2);0`);
   await wait(3800);
   ok('full: closed tab falls back to auto', (await t(`document.getElementById('target').value`)) === '');
+  // Chat-Ansicht: zeigt den Verlauf des gewählten Tabs, aktualisiert sich bei neuen Nachrichten
+  await t(`window.__transcript={1:[{role:'user',text:'[WORLD · 10:00 · ACTION · x] hello'},{role:'mind',text:'Reply one\\n\\n⏱ 10:00 · hp 5'}]};0`);
+  await wait(2200);
+  ok('chat: pane visible', (await t(`document.getElementById('chatPane').hidden`)) === false);
+  const msgs = await t(`[...document.querySelectorAll('#chatList .msg')].map(m=>m.className+'|'+m.querySelector('.body').textContent)`);
+  ok('chat: shows both messages with roles', msgs.length === 2 && msgs[0].startsWith('msg user|[WORLD') && msgs[1].startsWith('msg mind|Reply one'), msgs);
+  ok('chat: status line is set apart', (await t(`document.querySelectorAll('#chatList .hud').length`)) === 1);
+  await t(`window.__transcript[1].push({role:'user',text:'next'});0`);
+  await wait(2200);
+  ok('chat: picks up new message', (await t(`document.querySelectorAll('#chatList .msg').length`)) === 3);
+  ok('chat: pane hidden in side panel', (await ev(`document.getElementById('chatPane').hidden`)) === true);
   ok('full: no page errors', T.errs.length === 0, T.errs);
   P.finish();
 });

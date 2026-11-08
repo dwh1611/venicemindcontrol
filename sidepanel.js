@@ -533,6 +533,45 @@ async function renderTarget() {
   sel.value = pinnedTab == null ? '' : String(pinnedTab);
 }
 
+let chatSig = '';
+let chatBusy = false;
+async function renderChat() {
+  if (!TAB_MODE || chatBusy) return;
+  chatBusy = true;
+  try { await drawChat(); } finally { chatBusy = false; }
+}
+async function drawChat() {
+  $('chatPane').hidden = false;
+  const list = $('chatList');
+  const tab = await findVeniceTab();
+  const note = (txt) => { list.innerHTML = ''; list.appendChild(h('div', 'note', txt)); chatSig = ''; };
+  if (!tab) return note(t('chat.none'));
+  const [sigTab, ...sigRest] = chatSig.split('|');
+  const sig = sigTab === String(tab.id) ? sigRest.join('|') : '';
+  let res = null;
+  try { await ensureContentScript(tab.id); res = await chrome.tabs.sendMessage(tab.id, { type: 'transcript', sig }); } catch { /* Tab lädt noch */ }
+  if (!res || !res.ok || res.same) return;
+  chatSig = tab.id + '|' + res.sig;
+  const atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  list.innerHTML = '';
+  $('chatInfo').textContent = (res.title || '').slice(0, 60);
+  if (res.total > res.messages.length) list.appendChild(h('div', 'note', t('chat.more', { n: res.total - res.messages.length })));
+  if (!res.messages.length) list.appendChild(h('div', 'note', t('chat.empty')));
+  res.messages.forEach((m) => {
+    const box = h('div', 'msg ' + m.role);
+    box.appendChild(h('div', 'who', t(m.role === 'mind' ? 'chat.mind' : 'chat.you')));
+    const body = h('div', 'body');
+    m.text.split('\n').forEach((line, i) => {
+      if (i) body.appendChild(document.createTextNode('\n'));
+      if (m.role === 'mind' && line.startsWith('⏱')) body.appendChild(h('span', 'hud', line)); // Statuszeile abgesetzt
+      else body.appendChild(document.createTextNode(line));
+    });
+    box.appendChild(body);
+    list.appendChild(box);
+  });
+  if (atEnd) list.scrollTop = list.scrollHeight;
+}
+
 function initFullpage() {
   $('openTab').onclick = async () => {
     const tab = await findVeniceTab();
@@ -1643,5 +1682,6 @@ function initLang() {
   initProfileManager();
   initEditor();
   await refreshMind();
+  if (TAB_MODE) { renderChat(); setInterval(renderChat, 1500); }
   setInterval(refreshMind, 3000); // Fängt Seitenwechsel in der Single-Page-App ab
 })();
