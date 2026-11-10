@@ -62,6 +62,15 @@ ok('has: list lacks', P.test({ key: 'items', has: 'sword' }, { items: ['key'] })
 ok('has: string contains', P.test({ key: 'loc', has: 'bar' }, { loc: 'Red Bar' }) === true);
 ok('has validates', P.validate(base({ tabs: [{ id: 'a', label: 'A', when: { key: 'items', has: 'key' }, blocks: [{ type: 'hint', text: 'x' }] }] })).ok);
 
+// mindIds ist optional, wenn titleMatch gesetzt ist (und umgekehrt)
+{
+  const noIds = base({ titleMatch: 'Mel|Taminda' }); delete noIds.mindIds;
+  ok('mindIds optional with titleMatch', P.validate(noIds).ok === true, P.validate(noIds).errors);
+  const neither = base(); delete neither.mindIds;
+  const r = P.validate(neither);
+  ok('neither mindIds nor titleMatch is an error', r.ok === false && r.errors.some((e) => e.k === 'needIdOrTitle') && !r.errors.some((e) => e.k === 'mindIds'), r.errors);
+  ok('mindIds must be a list when given', P.validate(base({ mindIds: 'ABCDE12' })).ok === false);
+}
 // Mind-IDs: lokale Minds, Katalog-Minds (Slug) und eingefügte URLs
 ok('url: local mind', P.mindIdFromUrl('https://venice.ai/chat/minds/local/AbC12xY/9fk2lm') === 'AbC12xY');
 ok('url: catalog mind slug', P.mindIdFromUrl('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw') === 'mel-taminda-an-interactive-story-3281');

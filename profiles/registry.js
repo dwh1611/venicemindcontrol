@@ -211,7 +211,7 @@
     if (!isObj(p)) return { ok: false, errors: [{ k: 'notObj' }] };
     if (typeof p.id !== 'string' || !ID.test(p.id)) err('id');
     if (typeof p.name !== 'string' || !p.name.trim()) err('name');
-    if (!Array.isArray(p.mindIds) || p.mindIds.some((x) => !normMindId(x))) err('mindIds');
+    if (p.mindIds != null && (!Array.isArray(p.mindIds) || p.mindIds.some((x) => !normMindId(x)))) err('mindIds');
     if (p.titleMatch != null) { try { rx(p.titleMatch); } catch { err('titleBad'); } }
     if ((!p.mindIds || !p.mindIds.length) && !p.titleMatch) err('needIdOrTitle');
     if (!isObj(p.prefixes) || !p.prefixes.actor || !p.prefixes.world) err('prefixesMissing');
