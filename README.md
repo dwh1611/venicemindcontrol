@@ -93,7 +93,7 @@ know the format from its prompt yet. It is better to copy the explanation into t
 ## Mind detection
 The profile is determined in this order:
 1. **Manual assignment** (mind ID → profile), set in the panel and removable.
-2. **Mind ID** from the URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>` or `venice.ai/minds/local/<MIND-ID>/edit`.
+2. **Mind ID** from the URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>`, `venice.ai/minds/local/<MIND-ID>/edit` or, for catalog Minds, `venice.ai/chat/minds/<name-123>/<chat>` (the ID is the name part).
 3. **Page title** (`titleMatch` of the profile, e.g. "Chat with Lana").
 
 The mind ID stays the same when you rename the mind. No matching profile means: the panel shows the assignment, the page stays unchanged.
