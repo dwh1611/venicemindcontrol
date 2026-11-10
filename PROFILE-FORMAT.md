@@ -17,7 +17,7 @@ describe the mind and save the answer as a `.json` file.
 |---|---|---|
 | `id` | yes | 2-32 characters: a-z, 0-9, `_`, `-`. Built-in ids (`nightingale`, `ghostline`) are taken. Importing the same id replaces your own profile. |
 | `name` | yes | Display name. |
-| `mindIds` | yes* | Mind IDs from the URL `.../minds/local/<ID>/...`. |
+| `mindIds` | yes* | Mind IDs from the URL `.../minds/local/<ID>/...` or `.../minds/<name-123>/<chat>` (catalog Minds). Pasting the whole URL also works. |
 | `titleMatch` | yes* | Regular expression for the page title (fallback). *One of the two is enough. |
 | `defaultTime` | no | Start time `HH:MM`. |
 | `prefixes` | yes | `actor` (the user's lines) and `world` (events), e.g. `NIGHTINGALE` / `DESK`. Only capital letters, digits, `_`, `-`, 2-21 characters, starting with a letter. Otherwise the chat does not recognise the lines. |

@@ -62,6 +62,18 @@ ok('has: list lacks', P.test({ key: 'items', has: 'sword' }, { items: ['key'] })
 ok('has: string contains', P.test({ key: 'loc', has: 'bar' }, { loc: 'Red Bar' }) === true);
 ok('has validates', P.validate(base({ tabs: [{ id: 'a', label: 'A', when: { key: 'items', has: 'key' }, blocks: [{ type: 'hint', text: 'x' }] }] })).ok);
 
+// Mind-IDs: lokale Minds, Katalog-Minds (Slug) und eingefügte URLs
+ok('url: local mind', P.mindIdFromUrl('https://venice.ai/chat/minds/local/AbC12xY/9fk2lm') === 'AbC12xY');
+ok('url: catalog mind slug', P.mindIdFromUrl('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw') === 'mel-taminda-an-interactive-story-3281');
+ok('mindIds: slug accepted', P.validate(base({ mindIds: ['mel-taminda-an-interactive-story-3281'] })).ok === true);
+ok('mindIds: pasted URL accepted', P.validate(base({ mindIds: ['https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw'] })).ok === true);
+ok('mindIds: junk rejected', P.validate(base({ mindIds: ['no'] })).ok === false && P.validate(base({ mindIds: ['a b c d e'] })).ok === false);
+{
+  P.setCustom({ cat: base({ id: 'cat', mindIds: ['https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/x'] }) });
+  const d = P.detect('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw', 'x', {});
+  ok('detect: pasted URL in mindIds matches the catalog mind', d.profile && d.profile.id === 'cat' && d.source === 'id', d);
+}
+
 console.log(res.join('\n'));
 const failed = res.filter((r) => r.startsWith('FAIL')).length;
 console.log(failed ? `RESULT: ${failed} FAILED` : `RESULT: ALL ${res.length} PASSED`);

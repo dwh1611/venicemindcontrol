@@ -59,7 +59,7 @@
       notObj: "The file does not contain a profile object.",
       id: "id: 2–32 characters, only a–z, 0–9, _ and -.",
       name: "name is missing.",
-      mindIds: "mindIds: list of Mind IDs (from the URL …/minds/local/<ID>/…).",
+      mindIds: "mindIds: list of Mind IDs. Take it from the URL …/minds/local/<ID>/… or …/minds/<name-123>/<chat>; pasting the whole URL works too.",
       titleBad: "titleMatch is not a valid regular expression.",
       needIdOrTitle: "Give either mindIds or titleMatch.",
       prefixesMissing: "prefixes.actor and prefixes.world are missing.",
@@ -105,7 +105,7 @@
       notObj: "Die Datei enthält kein Profil-Objekt.",
       id: "id: 2–32 Zeichen, nur a–z, 0–9, _ und -.",
       name: "name fehlt.",
-      mindIds: "mindIds: Liste von Mind-IDs (aus der URL …/minds/local/<ID>/…).",
+      mindIds: "mindIds: Liste von Mind-IDs. Aus der URL …/minds/local/<ID>/… oder …/minds/<name-123>/<chat>; die ganze URL einzufügen geht auch.",
       titleBad: "titleMatch ist kein gültiger regulärer Ausdruck.",
       needIdOrTitle: "Entweder mindIds oder titleMatch angeben.",
       prefixesMissing: "prefixes.actor und prefixes.world fehlen.",
@@ -211,7 +211,7 @@
     if (!isObj(p)) return { ok: false, errors: [{ k: 'notObj' }] };
     if (typeof p.id !== 'string' || !ID.test(p.id)) err('id');
     if (typeof p.name !== 'string' || !p.name.trim()) err('name');
-    if (!Array.isArray(p.mindIds) || p.mindIds.some((x) => typeof x !== 'string' || !/^[A-Za-z0-9_-]{5,}$/.test(x))) err('mindIds');
+    if (!Array.isArray(p.mindIds) || p.mindIds.some((x) => !normMindId(x))) err('mindIds');
     if (p.titleMatch != null) { try { rx(p.titleMatch); } catch { err('titleBad'); } }
     if ((!p.mindIds || !p.mindIds.length) && !p.titleMatch) err('needIdOrTitle');
     if (!isObj(p.prefixes) || !p.prefixes.actor || !p.prefixes.world) err('prefixesMissing');
@@ -354,7 +354,15 @@
   const setLang = (l) => { lang = l || 'en'; loc.clear(); };
   const all = () => [...builtins, ...custom].map(localized);
 
-  // …/chat/minds/local/<id>/<chat>, …/minds/local/<id>/edit, …/minds/local/<id>
+  // …/chat/minds/local/<id>/<chat>, …/minds/local/<id>/edit, …/minds/local/<id>,
+  // sowie die Form …/chat/minds/<name-123>/<chat> (Mind aus dem Katalog)
+  // Eintrag in mindIds: reine ID oder eine eingefügte URL. Gibt die ID zurück oder null, wenn ungültig.
+  function normMindId(x) {
+    if (typeof x !== 'string') return null;
+    const s = x.trim();
+    if (/^[A-Za-z0-9_-]{5,}$/.test(s)) return s;
+    return /[/:]/.test(s) ? mindIdFromUrl(s) : null;
+  }
   const mindIdFromUrl = (url) => {
     const m = /\/minds\/(?:local\/)?([A-Za-z0-9_-]{5,})/.exec(url || '');
     return m ? m[1] : null;
@@ -370,7 +378,7 @@
       if (p) return { profile: p, mindId, source: 'assigned' };
     }
     if (mindId) {
-      const p = list.find((x) => (x.mindIds || []).includes(mindId));
+      const p = list.find((x) => (x.mindIds || []).some((m) => normMindId(m) === mindId));
       if (p) return { profile: p, mindId, source: 'id' };
     }
     const p = list.find((x) => re(x).title && re(x).title.test(title || ''));
