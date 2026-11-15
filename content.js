@@ -84,6 +84,25 @@
       sendResponse(last ? { ok: true, text: last.innerText.trim(), count: msgs.length } : { ok: false, code: 'no_reply' });
       return;
     }
+    if (msg?.type === 'transcript') {
+      const all = [...document.querySelectorAll('.assistant-content')];
+      const list = all.slice(-(msg.limit || 80)).map((ac) => ({
+        role: ac.closest('.assistant') ? 'mind' : 'user',
+        // Roh-Text je Absatz; die vom Panel gebauten Event-Boxen (.mc-evbox) doppeln nur die versteckten Zeilen.
+        html: (() => {
+          const c = ac.cloneNode(true);
+          c.querySelectorAll('.mc-evbox').forEach((b) => b.remove());
+          c.querySelectorAll('.mc-hidden').forEach((e) => e.classList.remove('mc-hidden'));
+          return c.innerHTML.slice(0, 60000);
+        })(),
+        text: [...ac.children].filter((c) => !c.classList.contains('mc-evbox')).map((c) => c.textContent.trim()).filter(Boolean).join('\n\n'),
+      }));
+      const last = list[list.length - 1];
+      const sig = all.length + ':' + (last ? last.text.length + ':' + last.text.slice(-40) : '');
+      if (msg.sig && msg.sig === sig) { sendResponse({ ok: true, same: true }); return; }
+      sendResponse({ ok: true, sig, title: document.title, total: all.length, messages: list });
+      return;
+    }
     if (msg?.type !== 'inject') return;
 
     const input = findInput();

@@ -11,7 +11,7 @@ async function open(profile, opts = {}) {
   const win = new BrowserWindow({ show: false, width: 440, height: 1600, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: false, sandbox: false } });
   const errs = [];
   win.webContents.on('console-message', (_e, level, msg) => { if (level >= 2 && !msg.includes('Security Warning')) errs.push(msg); });
-  await win.loadFile(path.join(ROOT, 'sidepanel.html'));
+  await win.loadURL(require('url').pathToFileURL(path.join(ROOT, 'sidepanel.html')).href + (opts.query ? '?' + opts.query : ''));
   await wait(800);
   const ev = (code) => win.webContents.executeJavaScript(code + (/;\s*$/.test(code) ? '' : ''));
   const results = [];

@@ -15,7 +15,7 @@ das Mind beschreiben und die Antwort als `.json` speichern. Beispiele liegen in 
 |---|---|---|
 | `id` | ja | 2–32 Zeichen: a–z, 0–9, `_`, `-`. Eingebaute ids (`nightingale`, `ghostline`) sind belegt. Gleiche id beim Import ersetzt das eigene Profil. |
 | `name` | ja | Anzeigename. |
-| `mindIds` | ja* | Mind-IDs aus der URL `…/minds/local/<ID>/…`. |
+| `mindIds` | ja* | Mind-IDs aus der URL `…/minds/local/<ID>/…` oder `…/minds/<name-123>/<chat>` (Katalog-Minds). Die ganze URL einzufügen geht auch. |
 | `titleMatch` | ja* | Regulärer Ausdruck für den Seitentitel (Rückfall). *Eines von beiden genügt. |
 | `defaultTime` | nein | Startzeit `HH:MM`. |
 | `prefixes` | ja | `actor` (Zeilen des Nutzers) und `world` (Ereignisse), z. B. `NIGHTINGALE` / `DESK`. Nur Großbuchstaben, Ziffern, `_`, `-`, 2–21 Zeichen, mit Buchstabe beginnend, sonst erkennt der Chat die Zeilen nicht. |
