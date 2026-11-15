@@ -215,7 +215,11 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 
 /* ---------- Vollbild-Modus (?mode=tab) ---------- */
 .langbar { align-items: center; gap: 8px; }
-.langbar button { padding: 2px 8px; font-size: 11px; }
+.langbar { flex-wrap: wrap; }
+.langbar button { padding: 2px 8px; font-size: 11px; white-space: nowrap; }
+.langbar .zoom { display: inline-flex; gap: 2px; }
+.langbar .zoom button { min-width: 34px; }
+.term { zoom: var(--ui, 1); }
 .targetbar select { max-width: 100%; min-width: 0; flex: 1; }
 .targetbar label { flex-direction: row; align-items: center; gap: 6px; }
 body.fullpage { display: flex; height: 100vh; overflow: hidden; }

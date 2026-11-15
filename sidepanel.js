@@ -784,6 +784,22 @@ function initComposer() {
   });
 }
 
+/* ---------- Oberflächen-Zoom (Seitenpanel und Vollbild) ---------- */
+let uiZoom = 1;
+function applyZoom(z) {
+  uiZoom = clamp(Math.round((parseFloat(z) || 1) * 10) / 10, 0.7, 1.8);
+  document.body.style.setProperty('--ui', String(uiZoom));
+  $('zoomReset').textContent = Math.round(uiZoom * 100) + '%';
+}
+async function initZoom() {
+  const { uiZoom: saved } = await chrome.storage.local.get('uiZoom');
+  applyZoom(saved);
+  const set = (z) => { applyZoom(z); chrome.storage.local.set({ uiZoom }); };
+  $('zoomOut').onclick = () => set(uiZoom - 0.1);
+  $('zoomIn').onclick = () => set(uiZoom + 0.1);
+  $('zoomReset').onclick = () => set(1);
+}
+
 function initFullpage() {
   $('openTab').onclick = async () => {
     const tab = await findVeniceTab();
@@ -1617,6 +1633,7 @@ function initStatic() {
     if (area !== 'local') return;
     if (profile && ch[key('gameState')] && ch[key('gameState')].newValue) applyState(ch[key('gameState')].newValue);
     if (ch.mindMap) refreshMind();
+    if (ch.uiZoom && ch.uiZoom.newValue !== uiZoom) applyZoom(ch.uiZoom.newValue); // anderes Panel/Fenster hat gezoomt
   });
   const soon = () => setTimeout(refreshMind, 150);
   chrome.tabs.onActivated.addListener(soon);
@@ -1893,6 +1910,7 @@ function initLang() {
   setLanguage(I18n.lang);
   initStatic();
   initSpeech();
+  initZoom();
   initFullpage();
   initProfileManager();
   initEditor();

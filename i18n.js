@@ -8,6 +8,10 @@
     en: {
       'lang.label': 'Language',
       'full.open': 'FULL PAGE',
+      'zoom.group': 'Interface size',
+      'zoom.out': 'Smaller interface',
+      'zoom.in': 'Larger interface',
+      'zoom.reset': 'Reset interface size',
       'full.openHint': 'Open the console in its own tab and keep the Mind running in the background',
       'full.target': 'Mind tab',
       'speech.summary': 'READ REPLIES ALOUD',
@@ -250,6 +254,10 @@
     de: {
       'lang.label': 'Sprache',
       'full.open': 'VOLLBILD',
+      'zoom.group': 'Größe der Oberfläche',
+      'zoom.out': 'Oberfläche kleiner',
+      'zoom.in': 'Oberfläche größer',
+      'zoom.reset': 'Größe zurücksetzen',
       'full.openHint': 'Die Konsole in einem eigenen Tab öffnen, das Mind läuft im Hintergrund weiter',
       'full.target': 'Mind-Tab',
       'speech.summary': 'ANTWORTEN VORLESEN',
