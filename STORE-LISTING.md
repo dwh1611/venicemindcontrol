@@ -18,7 +18,11 @@ Mind Console adds a side panel to venice.ai that turns a roleplay Mind into a ga
 • Detects the Mind you are talking to (by its Mind ID) and loads the matching profile
 • Buttons for scenes, actions and time jumps – inserted into the chat in a clean, consistent line format
 • Status HUD and clock parsed from the Mind's answers
-• Built-in profiles: Nightingale, Ghostline
+• Game rules in the panel: dice and random tables, scheduled events, game state with variables, buttons built from lists
+• Relay between two Minds with optional auto-forward
+• Full-page mode: the console in its own tab with a live chat view and a message box
+• Save slots, favorites, history search and session export
+• Built-in profiles: Nightingale, Ghostline, plus ready-made example profiles on GitHub
 • Interface in English (default) and German
 • Add your own Minds without code: import a profile as plain JSON (guide and a generator prompt included)
 • Everything stays in your browser – no tracking, no servers
@@ -32,7 +36,11 @@ Mind Console ergänzt venice.ai um eine Seitenleiste, die ein Rollenspiel-Mind i
 • Erkennt das Mind (über die Mind-ID) und lädt das passende Profil
 • Buttons für Szenen, Aktionen und Zeitsprünge – sauber formatiert in den Chat eingefügt
 • Status-HUD und Uhr aus den Antworten des Minds
-• Eingebaute Profile: Nightingale, Ghostline
+• Spielregeln im Panel: Würfel und Zufallstabellen, geplante Ereignisse, Spielzustand mit Variablen, Buttons aus Listen
+• Relay zwischen zwei Minds mit optionalem Auto-Forward
+• Vollbild-Modus: die Konsole im eigenen Tab mit Live-Chat-Ansicht und Eingabebox
+• Spielstände, Favoriten, Verlaufssuche und Sitzungsexport
+• Eingebaute Profile: Nightingale, Ghostline, dazu fertige Beispielprofile auf GitHub
 • Oberfläche auf Englisch (Standard) und Deutsch
 • Eigene Minds ohne Code: Profil als reines JSON importieren (Anleitung und Generator-Prompt inklusive)
 • Alles bleibt im Browser – kein Tracking, keine Server
@@ -46,7 +54,7 @@ Provide a side panel that detects the active venice.ai Mind and offers a control
 - **sidePanel**: the console UI is shown in Chrome's side panel.
 - **storage**: saves profiles, queue, theme and game state locally.
 - **scripting**: injects the content script into venice.ai tabs that were already open when the extension was installed or updated.
-- **Host access (venice.ai)**: the content script reads the Mind ID, page title and chat messages, and inserts text into the chat input on the user's request. No other site is accessed.
+- **Host access (venice.ai)**: the content script reads the Mind ID, page title and chat messages (also shown in the optional full-page chat view), and inserts text into the chat input on the user's request. No other site is accessed.
 - **Remote code**: none. Profiles are JSON data, never executed.
 
 ## Data usage form
