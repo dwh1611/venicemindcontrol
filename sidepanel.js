@@ -451,6 +451,131 @@ async function autoTick() {
   }
 }
 
+/* ---------- Sprachausgabe (lokal, optional; #28) ----------
+   Beobachtet den aktuellen Tab und die Relay-Tabs. Eine neue Antwort wird gesprochen, sobald sie sich
+   SPEECH_SETTLE_MS nicht mehr verändert hat. Was beim Einschalten schon im Chat steht, wird nicht gelesen.
+   Die Textaufbereitung steht in speech.js; die Stimme pro Sprecher kommt aus dem Profilblock `speech`. */
+const SPEECH_TICK_MS = 1000;
+const SPEECH_SETTLE_MS = 2500;
+const speech = { on: false, timer: null, busy: false, seen: {}, pending: {}, prefs: { voice: '', rate: 1, volume: 1, online: false } };
+const synth = () => (typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined' ? speechSynthesis : null);
+
+function speechVoices() {
+  const s = synth();
+  return s ? s.getVoices().filter((v) => v.localService || speech.prefs.online) : [];
+}
+
+function renderSpeechVoices() {
+  const sel = $('speechVoice');
+  const voices = speechVoices().sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+  const opt = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+  sel.innerHTML = '';
+  sel.appendChild(opt('', t('speech.auto')));
+  voices.forEach((v) => sel.appendChild(opt(v.name, `${v.name} (${v.lang})`)));
+  sel.value = voices.some((v) => v.name === speech.prefs.voice) ? speech.prefs.voice : '';
+}
+
+function saveSpeechPrefs() {
+  speech.prefs = {
+    voice: $('speechVoice').value,
+    rate: parseFloat($('speechRate').value) || 1,
+    volume: clamp(parseFloat($('speechVolume').value), 0, 1),
+    online: $('speechOnline').checked,
+  };
+  chrome.storage.local.set({ speechPrefs: speech.prefs });
+}
+
+// Spricht eine Antwort. `cfg` ist der Profilblock `speech` (darf fehlen).
+function speak(body, cfg) {
+  const s = synth();
+  if (!s) return;
+  const voices = speechVoices();
+  for (const item of MindSpeech.plan(body, cfg)) {
+    const u = new SpeechSynthesisUtterance(item.text);
+    const v = MindSpeech.pickVoice(voices, item.voice || speech.prefs.voice, item.lang);
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = item.lang;
+    u.rate = clamp(speech.prefs.rate * item.rate, 0.5, 2);
+    u.pitch = item.pitch;
+    u.volume = speech.prefs.volume;
+    s.speak(u);
+  }
+}
+
+async function speechTabs() {
+  const list = [];
+  const cur = await findVeniceTab();
+  if (cur) list.push(await describeTab(cur));
+  for (const slot of ['a', 'b']) {
+    const r = await relayTab(slot);
+    if (r && !list.some((x) => x.id === r.id)) list.push(r);
+  }
+  return list;
+}
+
+async function speechSnapshot() {
+  speech.seen = {}; speech.pending = {};
+  for (const tab of await speechTabs()) {
+    const r = await readReply(tab);
+    const body = r && r.ok ? cleanReply(r.text) : '';
+    speech.seen[tab.id] = body ? replyPrint({ count: r.count, text: body }) : '';
+  }
+}
+
+async function speechTick() {
+  if (!speech.on || speech.busy) return;
+  speech.busy = true;
+  try {
+    for (const tab of await speechTabs()) {
+      const r = await readReply(tab);
+      const body = r && r.ok ? cleanReply(r.text) : '';
+      if (!(tab.id in speech.seen)) { speech.seen[tab.id] = body ? replyPrint({ count: r.count, text: body }) : ''; continue; } // neuer Tab: Ausgangslage
+      if (!body) { delete speech.pending[tab.id]; continue; }
+      const print = replyPrint({ count: r.count, text: body });
+      if (print === speech.seen[tab.id]) { delete speech.pending[tab.id]; continue; }
+      const p = speech.pending[tab.id];
+      if (!p || p.print !== print) { speech.pending[tab.id] = { print, since: Date.now() }; continue; } // noch im Fluss
+      if (Date.now() - p.since < SPEECH_SETTLE_MS) continue;
+      speech.seen[tab.id] = print;
+      delete speech.pending[tab.id];
+      speak(body, tab.profile && tab.profile.speech);
+    }
+  } finally {
+    speech.busy = false;
+  }
+}
+
+async function speechSet(on) {
+  const s = synth();
+  if (on && !s) { $('speechOn').checked = false; return status(t('speech.unsupported'), false); }
+  clearInterval(speech.timer);
+  speech.timer = null;
+  speech.on = on;
+  if (on) {
+    await speechSnapshot();
+    speech.timer = setInterval(speechTick, SPEECH_TICK_MS);
+    status(t('speech.started'));
+  } else {
+    if (s) s.cancel();
+    status(t('speech.stopped'));
+  }
+}
+
+async function initSpeech() {
+  const { speechPrefs } = await chrome.storage.local.get('speechPrefs');
+  if (speechPrefs) speech.prefs = { ...speech.prefs, ...speechPrefs };
+  $('speechRate').value = String(speech.prefs.rate);
+  $('speechVolume').value = String(speech.prefs.volume);
+  $('speechOnline').checked = !!speech.prefs.online;
+  renderSpeechVoices();
+  const s = synth();
+  if (s && s.addEventListener) s.addEventListener('voiceschanged', renderSpeechVoices);
+  $('speechOn').onchange = () => speechSet($('speechOn').checked);
+  $('speechOnline').onchange = () => { saveSpeechPrefs(); renderSpeechVoices(); saveSpeechPrefs(); };
+  ['speechVoice', 'speechRate', 'speechVolume'].forEach((id) => $(id).addEventListener('change', saveSpeechPrefs));
+  $('speechTest').onclick = () => { if (!synth()) return status(t('speech.unsupported'), false); synth().cancel(); speak(t('speech.testText'), profile && profile.speech); };
+  $('speechStop').onclick = () => { if (synth()) synth().cancel(); };
+}
+
 /* ---------- Sitzungs-Export ---------- */
 const stamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
 
@@ -1767,6 +1892,7 @@ function initLang() {
   initLang();
   setLanguage(I18n.lang);
   initStatic();
+  initSpeech();
   initFullpage();
   initProfileManager();
   initEditor();

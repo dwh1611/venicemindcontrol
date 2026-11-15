@@ -169,6 +169,22 @@
         <button id="autoStart" class="primary" data-i18n="auto.start">START AUTO-FORWARD</button>
       </details>
 
+      <details class="settings" id="speechBox">
+        <summary data-i18n="speech.summary">READ REPLIES ALOUD</summary>
+        <p class="hint" data-i18n="speech.hint">Speaks every new, finished reply of the Mind (and of the relay tabs) with your browser's voices. Off by default. Replies already in the chat are not read.</p>
+        <label class="inline"><input type="checkbox" id="speechOn" /> <span data-i18n="speech.on">speak new replies</span></label>
+        <label><span data-i18n="speech.voice">Voice</span><select id="speechVoice"></select></label>
+        <div class="cols">
+          <label><span data-i18n="speech.rate">Speed</span><input id="speechRate" type="range" min="0.6" max="1.6" step="0.05" value="1" /></label>
+          <label><span data-i18n="speech.volume">Volume</span><input id="speechVolume" type="range" min="0" max="1" step="0.05" value="1" /></label>
+        </div>
+        <label class="inline"><input type="checkbox" id="speechOnline" /> <span data-i18n="speech.online">also list online voices (the text is then sent to the voice provider)</span></label>
+        <div class="row">
+          <button id="speechTest" data-i18n="speech.test">TEST</button>
+          <button id="speechStop" data-i18n="speech.stop">SILENCE</button>
+        </div>
+      </details>
+
       <details class="settings" id="slotsBox">
         <summary data-i18n="slots.summary">SAVES</summary>
         <p class="hint" data-i18n="slots.hint">A save keeps clock, queue, history and pins of this mind. Loading replaces the current state.</p>
@@ -228,6 +244,7 @@
   <script src="profiles/registry.js"></script>
   <script src="profiles/nightingale.js"></script>
   <script src="profiles/ghostline.js"></script>
+  <script src="speech.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

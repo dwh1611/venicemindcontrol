@@ -171,6 +171,30 @@ buttons only appear when they make sense:
 - Until the first status line has been read, everything is shown. A missing value makes the condition false (except `exists: false`).
 - If the open tab gets hidden, the panel switches to the first visible tab.
 
+## Speech (`speech`, optional)
+The panel can read new replies aloud (section *READ REPLIES ALOUD*, off by default). The profile sets how each Mind sounds:
+
+```json
+"speech": {
+  "lang": "en-US",
+  "voice": "Alex",
+  "rate": 1,
+  "pitch": 1,
+  "speakers": {
+    "Mel": { "pitch": 1.3, "rate": 1.05 },
+    "Tam": { "voice": "Daniel", "pitch": 0.8 }
+  },
+  "skip": ["^\\(OOC"]
+}
+```
+
+- `lang`, `voice`: language code and voice name (a part of the name is enough). Without them the panel guesses German or English from the reply and uses the voice chosen in the panel.
+- `rate` (0.5–2) and `pitch` (0–2): speed and pitch of this Mind.
+- `speakers`: a line that starts with `Name:` (also `**Name:**`) is spoken with that character's settings; the following lines keep it until the next marker. Names are matched without regard to case; unknown names are read as normal text.
+- `skip`: lines that match one of these regular expressions are not read. The `⏱` status line, links and Markdown marks are never read.
+- With a relay, both tabs are watched and each Mind uses the `speech` block of its own profile, so two Minds can have two voices (see `examples/two-minds.profiles.json`).
+- Only the browser's voices are used. Online voices (for example Google voices in Chrome) are hidden unless you allow them in the panel, because the text is then sent to the provider of the voice.
+
 ## Relay (`relay`, optional)
 With two Mind tabs open, the panel can copy the last reply of one Mind into the chat box of the other (*RELAY BETWEEN TWO MINDS*).
 The line is built with the **receiving** profile:
