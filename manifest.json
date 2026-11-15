@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mind Console",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Side panel for venice.ai Minds: detects the Mind and shows its control console. Built-in profiles plus your own via JSON. Unofficial.",
   "permissions": [
     "sidePanel",
