@@ -8,6 +8,19 @@
 <body>
   <div class="crt" aria-hidden="true"></div>
 
+  <div class="splitter" id="splitter" hidden title="Drag to resize"></div>
+  <aside class="chatpane" id="chatPane" hidden>
+    <div class="chathead"><b data-i18n="chat.title">CHAT</b><span id="chatInfo" class="mut"></span><span class="grow"></span>
+      <button id="layBtn" data-i18n-title="chat.layoutHint" aria-label="Layout">⇄</button>
+      <button id="cfMinus" data-i18n-title="chat.cfHint">A−</button><button id="cfPlus" data-i18n-title="chat.cfHint">A+</button></div>
+    <div class="chatlist" id="chatList" role="log" aria-live="off"></div>
+    <form class="composer" id="composer">
+      <textarea id="chatInput" rows="2" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph"></textarea>
+      <button id="chatSend" class="primary" type="submit" data-i18n="chat.send">SEND</button>
+      <span id="chatStatus" class="cstat" aria-live="polite"></span>
+    </form>
+  </aside>
+
   <main class="term">
     <div class="autobar" id="autoBar" hidden>
       <span id="autoBarText"></span>
@@ -15,10 +28,17 @@
     </div>
 
     <div class="langbar">
+      <button id="openTab" data-i18n="full.open" data-i18n-title="full.openHint">FULL PAGE</button>
       <label class="inline"><span class="k" data-i18n="lang.label">Language</span>
         <select id="lang" aria-label="Language"></select>
       </label>
     </div>
+
+    <section class="targetbar" id="targetBar" hidden>
+      <label class="inline"><span class="k" data-i18n="full.target">Mind tab</span>
+        <select id="target" data-i18n-aria="full.target" aria-label="Mind tab"></select>
+      </label>
+    </section>
 
     <section class="mindbar" id="mindbar"></section>
 

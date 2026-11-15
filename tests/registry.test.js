@@ -62,6 +62,27 @@ ok('has: list lacks', P.test({ key: 'items', has: 'sword' }, { items: ['key'] })
 ok('has: string contains', P.test({ key: 'loc', has: 'bar' }, { loc: 'Red Bar' }) === true);
 ok('has validates', P.validate(base({ tabs: [{ id: 'a', label: 'A', when: { key: 'items', has: 'key' }, blocks: [{ type: 'hint', text: 'x' }] }] })).ok);
 
+// mindIds ist optional, wenn titleMatch gesetzt ist (und umgekehrt)
+{
+  const noIds = base({ titleMatch: 'Mel|Taminda' }); delete noIds.mindIds;
+  ok('mindIds optional with titleMatch', P.validate(noIds).ok === true, P.validate(noIds).errors);
+  const neither = base(); delete neither.mindIds;
+  const r = P.validate(neither);
+  ok('neither mindIds nor titleMatch is an error', r.ok === false && r.errors.some((e) => e.k === 'needIdOrTitle') && !r.errors.some((e) => e.k === 'mindIds'), r.errors);
+  ok('mindIds must be a list when given', P.validate(base({ mindIds: 'ABCDE12' })).ok === false);
+}
+// Mind-IDs: lokale Minds, Katalog-Minds (Slug) und eingefügte URLs
+ok('url: local mind', P.mindIdFromUrl('https://venice.ai/chat/minds/local/AbC12xY/9fk2lm') === 'AbC12xY');
+ok('url: catalog mind slug', P.mindIdFromUrl('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw') === 'mel-taminda-an-interactive-story-3281');
+ok('mindIds: slug accepted', P.validate(base({ mindIds: ['mel-taminda-an-interactive-story-3281'] })).ok === true);
+ok('mindIds: pasted URL accepted', P.validate(base({ mindIds: ['https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw'] })).ok === true);
+ok('mindIds: junk rejected', P.validate(base({ mindIds: ['no'] })).ok === false && P.validate(base({ mindIds: ['a b c d e'] })).ok === false);
+{
+  P.setCustom({ cat: base({ id: 'cat', mindIds: ['https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/x'] }) });
+  const d = P.detect('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw', 'x', {});
+  ok('detect: pasted URL in mindIds matches the catalog mind', d.profile && d.profile.id === 'cat' && d.source === 'id', d);
+}
+
 console.log(res.join('\n'));
 const failed = res.filter((r) => r.startsWith('FAIL')).length;
 console.log(failed ? `RESULT: ${failed} FAILED` : `RESULT: ALL ${res.length} PASSED`);

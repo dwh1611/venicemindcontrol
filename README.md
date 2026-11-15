@@ -48,6 +48,7 @@ in the panel. Two profiles are built in: *Nightingale* (agent and operator) and 
 - **Profile editor.** Edit, copy and create profiles in the panel with live validation and a preview that saves nothing.
 - **Rules in the panel.** Dice and random tables, scheduled world events tied to the in-world clock, game state (HP, money, a pack) with a state line, and buttons built from lists. Profiles switch them on, see [PROFILE-FORMAT.md](PROFILE-FORMAT.md#rules-in-the-panel-v12).
 - **Relay between two Minds.** Copy the last reply of one Mind into the chat box of another (game master and character). Manual relay only inserts; sending is a separate switch.
+- **Full-page console (prototype).** The **FULL PAGE** button opens the console in its own tab. Pick which open Venice tab is the Mind, so you can work in other tabs while it runs in the background. The whole chat is shown next to the console (read from the Venice tab, with formatting) and has its own message box. The layout switches between chat on the right and at the bottom. Chrome may throttle hidden tabs.
 - **Auto-forward.** Optional: new, finished replies are forwarded and sent on their own, one way or back and forth, with a maximum number of forwards, a settle time, a red STOP bar and several automatic stops.
 - **Multilingual interface.** English by default, German included. Switch with the language selector at the top of the panel; profiles can bring their own translations.
 - **Upload your own profiles.** Import, export, delete, template, and a prompt with which a chat model writes a profile from a description of your mind.
@@ -92,7 +93,7 @@ know the format from its prompt yet. It is better to copy the explanation into t
 ## Mind detection
 The profile is determined in this order:
 1. **Manual assignment** (mind ID → profile), set in the panel and removable.
-2. **Mind ID** from the URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>` or `venice.ai/minds/local/<MIND-ID>/edit`.
+2. **Mind ID** from the URL: `venice.ai/chat/minds/local/<MIND-ID>/<chat>`, `venice.ai/minds/local/<MIND-ID>/edit` or, for catalog Minds, `venice.ai/chat/minds/<name-123>/<chat>` (the ID is the name part).
 3. **Page title** (`titleMatch` of the profile, e.g. "Chat with Lana").
 
 The mind ID stays the same when you rename the mind. No matching profile means: the panel shows the assignment, the page stays unchanged.

@@ -8,6 +8,9 @@ const h = (tag, cls, text) => {
 };
 
 /* ---------- Zustand ---------- */
+const TAB_MODE = new URLSearchParams(location.search).get('mode') === 'tab';
+if (TAB_MODE) document.body.classList.add('fullpage');
+let pinnedTab = null;    // Vollbild: festgelegter Venice-Tab (null = automatisch)
 let profile = null;
 let queue = [];
 let history = [];
@@ -492,6 +495,11 @@ const URL_PATTERNS = ['https://venice.ai/*', 'https://*.venice.ai/*'];
 async function findVeniceTab() {
   const found = await chrome.tabs.query({ url: URL_PATTERNS });
   if (!found.length) return null;
+  if (TAB_MODE && pinnedTab != null) {
+    const p = found.find((x) => x.id === pinnedTab);
+    if (p) return p;
+    pinnedTab = null; // Tab wurde geschlossen: zurück auf automatisch
+  }
   return found.find((t) => t.active && t.lastFocusedWindow) || found.find((t) => t.active) ||
     found.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
 }
@@ -505,6 +513,169 @@ async function ensureContentScript(tabId) {
       files: ['profiles/registry.js', 'profiles/nightingale.js', 'profiles/ghostline.js', 'content.js'],
     });
   }
+}
+
+/* ---------- Vollbild-Modus ---------- */
+let targetSig = '';
+async function renderTarget() {
+  if (!TAB_MODE) return;
+  $('targetBar').hidden = false;
+  const found = (await chrome.tabs.query({ url: URL_PATTERNS })).sort((a, b) => a.id - b.id);
+  if (pinnedTab != null && !found.some((x) => x.id === pinnedTab)) pinnedTab = null;
+  const sig = JSON.stringify([I18n.lang, pinnedTab, found.map((x) => [x.id, x.title])]);
+  if (sig === targetSig) return;
+  targetSig = sig;
+  const sel = $('target');
+  sel.innerHTML = '';
+  const opt = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+  sel.appendChild(opt('', t('full.auto')));
+  found.forEach((x) => sel.appendChild(opt(String(x.id), `#${x.id} · ${(x.title || x.url || '').slice(0, 60)}`)));
+  sel.value = pinnedTab == null ? '' : String(pinnedTab);
+}
+
+/* ---------- Chat-Formatierung (nur Text-Knoten, keine fremden Attribute) ---------- */
+const CHAT_TAGS = new Set(['P', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL', 'UL', 'OL', 'LI', 'CODE', 'PRE', 'BR', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD']);
+function cleanNode(src, dst) {
+  src.childNodes.forEach((n) => {
+    if (n.nodeType === 3) dst.appendChild(document.createTextNode(n.textContent));
+    else if (n.nodeType === 1) {
+      if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'].includes(n.tagName)) return;
+      if (CHAT_TAGS.has(n.tagName)) { const e = document.createElement(n.tagName.toLowerCase()); cleanNode(n, e); dst.appendChild(e); }
+      else cleanNode(n, dst); // unbekanntes Element: nur der Inhalt bleibt (z. B. div, span, a)
+    }
+  });
+}
+const EVENT_RX = /^\[([^\]·]+?)\s*·\s*(\d{1,2}:\d{2})\s*·\s*([^·\]]+?)(?:\s*·\s*([^\]]+))?\]\s*([\s\S]*)$/;
+function eventRow(p) {
+  const m = EVENT_RX.exec(p.textContent.trim());
+  if (!m) return null;
+  const color = profile && profile.eventKinds && profile.eventKinds[m[3].trim()];
+  const row = h('div', 'ev');
+  const chip = h('span', 'chip', m[3].trim());
+  if (color) chip.style.color = color;
+  row.append(chip, h('span', 'meta', m[2] + ' · ' + m[1].trim() + (m[4] ? ' · ' + m[4].trim() : '')));
+  if (m[5]) row.appendChild(h('span', 'txt', m[5]));
+  return row;
+}
+function chatBody(m) {
+  const wrap = document.createElement('div');
+  if (m.html) cleanNode(new DOMParser().parseFromString(m.html, 'text/html').body, wrap);
+  else m.text.split(/\n\n+/).forEach((para) => wrap.appendChild(h('p', null, para)));
+  [...wrap.children].forEach((c) => {
+    if (c.tagName !== 'P') return;
+    const txt = c.textContent.trim();
+    if (m.role === 'mind' && txt.startsWith('⏱')) c.className = 'hud';
+    else if (m.role === 'user') { const r = eventRow(c); if (r) c.replaceWith(r); }
+  });
+  return wrap;
+}
+
+let chatSig = '';
+let chatBusy = false;
+async function renderChat() {
+  if (!TAB_MODE || chatBusy) return;
+  chatBusy = true;
+  try { await drawChat(); } finally { chatBusy = false; }
+}
+async function drawChat() {
+  $('chatPane').hidden = false;
+  const list = $('chatList');
+  const tab = await findVeniceTab();
+  const note = (txt) => { list.innerHTML = ''; list.appendChild(h('div', 'note', txt)); chatSig = ''; };
+  if (!tab) return note(t('chat.none'));
+  const [sigTab, ...sigRest] = chatSig.split('|');
+  const sig = sigTab === String(tab.id) ? sigRest.join('|') : '';
+  let res = null;
+  try { await ensureContentScript(tab.id); res = await chrome.tabs.sendMessage(tab.id, { type: 'transcript', sig }); } catch { /* Tab lädt noch */ }
+  if (!res || !res.ok || res.same) return;
+  chatSig = tab.id + '|' + res.sig;
+  const atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  list.innerHTML = '';
+  $('chatInfo').textContent = (res.title || '').slice(0, 60);
+  if (res.total > res.messages.length) list.appendChild(h('div', 'note', t('chat.more', { n: res.total - res.messages.length })));
+  if (!res.messages.length) list.appendChild(h('div', 'note', t('chat.empty')));
+  res.messages.forEach((m) => {
+    const box = h('div', 'msg ' + m.role);
+    box.appendChild(h('div', 'who', t(m.role === 'mind' ? 'chat.mind' : 'chat.you')));
+    const body = h('div', 'body');
+    body.appendChild(chatBody(m));
+    box.appendChild(body);
+    list.appendChild(box);
+  });
+  if (atEnd) list.scrollTop = list.scrollHeight;
+}
+
+const FULL = { layout: 'right', cf: 15 };
+function applyFull() {
+  const b = document.body;
+  b.classList.toggle('lay-right', FULL.layout === 'right');
+  b.classList.toggle('lay-bottom', FULL.layout === 'bottom');
+  b.style.setProperty('--cf', FULL.cf + 'px');
+  try { localStorage.setItem('fullPrefs', JSON.stringify({ ...FULL, termW: b.style.getPropertyValue('--termW'), chatH: b.style.getPropertyValue('--chatH') })); } catch { /* ignore */ }
+}
+function initSplitter() {
+  const sp = $('splitter');
+  sp.hidden = false;
+  const b = document.body;
+  try {
+    const p = JSON.parse(localStorage.getItem('fullPrefs') || '{}');
+    if (p.layout === 'right' || p.layout === 'bottom') FULL.layout = p.layout;
+    if (p.cf >= 11 && p.cf <= 28) FULL.cf = p.cf;
+    if (p.termW) b.style.setProperty('--termW', p.termW);
+    if (p.chatH) b.style.setProperty('--chatH', p.chatH);
+  } catch { /* ignore */ }
+  applyFull();
+  $('layBtn').onclick = () => { FULL.layout = FULL.layout === 'right' ? 'bottom' : 'right'; applyFull(); };
+  $('cfMinus').onclick = () => { FULL.cf = Math.max(11, FULL.cf - 1); applyFull(); };
+  $('cfPlus').onclick = () => { FULL.cf = Math.min(28, FULL.cf + 1); applyFull(); };
+  sp.onpointerdown = (e) => {
+    sp.setPointerCapture(e.pointerId);
+    sp.onpointermove = (ev) => {
+      if (FULL.layout === 'right') b.style.setProperty('--termW', Math.max(300, Math.min(window.innerWidth - 260, ev.clientX)) + 'px');
+      else b.style.setProperty('--chatH', Math.max(120, Math.min(window.innerHeight - 160, window.innerHeight - ev.clientY)) + 'px');
+    };
+    sp.onpointerup = () => { sp.onpointermove = null; sp.onpointerup = null; applyFull(); };
+  };
+}
+
+function initComposer() {
+  const input = $('chatInput');
+  const cs = $('chatStatus');
+  const sendChat = async () => {
+    const text = input.value.trim();
+    if (!text || $('chatSend').disabled) return;
+    $('chatSend').disabled = true;
+    try {
+      const ok = await inject(text, { send: true, append: false });
+      cs.className = 'cstat' + (ok ? '' : ' err');
+      cs.textContent = ok ? t('chat.sentOk') : $('status').textContent;
+      if (ok) { input.value = ''; chatSig = ''; renderChat(); }
+    } finally { $('chatSend').disabled = false; input.focus(); }
+  };
+  $('composer').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // Konsolen-Kürzel (Alt+…, Strg+Enter) gelten hier nicht
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+  });
+}
+
+function initFullpage() {
+  $('openTab').onclick = async () => {
+    const tab = await findVeniceTab();
+    const q = '?mode=tab' + (tab ? '&tab=' + tab.id : '');
+    await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html' + q) });
+  };
+  if (!TAB_MODE) return;
+  initSplitter();
+  initComposer();
+  const want = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  if (!isNaN(want)) pinnedTab = want;
+  $('target').onchange = () => {
+    pinnedTab = $('target').value ? parseInt($('target').value, 10) : null;
+    if (auto.on) autoStop('auto.stopped.manual'); // anderes Ziel: Automatik anhalten
+    profile = null; // Profil des neuen Tabs neu erkennen
+    refreshMind();
+  };
 }
 
 function status(msg, ok = true) {
@@ -1252,6 +1423,7 @@ async function refreshMind() {
   if (refreshing || editing) return;
   refreshing = true;
   try {
+    await renderTarget();
     const tab = await findVeniceTab();
     if (!tab) { showUnknown(null, null, t('status.noTab')); return; }
     const { mindMap } = await chrome.storage.local.get('mindMap');
@@ -1595,8 +1767,10 @@ function initLang() {
   initLang();
   setLanguage(I18n.lang);
   initStatic();
+  initFullpage();
   initProfileManager();
   initEditor();
   await refreshMind();
+  if (TAB_MODE) { renderChat(); setInterval(renderChat, 1500); }
   setInterval(refreshMind, 3000); // Fängt Seitenwechsel in der Single-Page-App ab
 })();
