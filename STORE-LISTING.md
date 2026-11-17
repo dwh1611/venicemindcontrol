@@ -21,7 +21,9 @@ Mind Console adds a side panel to venice.ai that turns a roleplay Mind into a ga
 • Game rules in the panel: dice and random tables, scheduled events, game state with variables, buttons built from lists
 • Relay between two Minds with optional auto-forward
 • Full-page mode: the console in its own tab with a live chat view and a message box
-• Save slots, favorites, history search and session export
+• Read replies aloud with a separate voice per Mind or character (optional)
+• Profile assistant: the Mind writes its own profile, the panel opens it in the editor
+• Interface zoom, save slots, favorites, history search and session export
 • Built-in profiles: Nightingale, Ghostline, plus ready-made example profiles on GitHub
 • Interface in English (default) and German
 • Add your own Minds without code: import a profile as plain JSON (guide and a generator prompt included)
@@ -39,7 +41,9 @@ Mind Console ergänzt venice.ai um eine Seitenleiste, die ein Rollenspiel-Mind i
 • Spielregeln im Panel: Würfel und Zufallstabellen, geplante Ereignisse, Spielzustand mit Variablen, Buttons aus Listen
 • Relay zwischen zwei Minds mit optionalem Auto-Forward
 • Vollbild-Modus: die Konsole im eigenen Tab mit Live-Chat-Ansicht und Eingabebox
-• Spielstände, Favoriten, Verlaufssuche und Sitzungsexport
+• Antworten vorlesen, mit eigener Stimme je Mind oder Figur (optional)
+• Profil-Assistent: das Mind schreibt sein Profil selbst, das Panel öffnet es im Editor
+• Oberflächen-Zoom, Spielstände, Favoriten, Verlaufssuche und Sitzungsexport
 • Eingebaute Profile: Nightingale, Ghostline, dazu fertige Beispielprofile auf GitHub
 • Oberfläche auf Englisch (Standard) und Deutsch
 • Eigene Minds ohne Code: Profil als reines JSON importieren (Anleitung und Generator-Prompt inklusive)
