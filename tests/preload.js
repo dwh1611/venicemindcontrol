@@ -43,3 +43,19 @@ window.chrome = {
   runtime: { getURL: (x) => 'chrome-extension://test/' + x },
   scripting: { executeScript: async () => {} },
 };
+
+// Nachgebaute Sprachausgabe: merkt sich, was gesprochen würde.
+window.__spoken = []; window.__cancelled = 0;
+window.__voices = [
+  { name: 'Alex', lang: 'en-US', localService: true, default: true },
+  { name: 'Daniel', lang: 'en-GB', localService: true, default: false },
+  { name: 'Anna', lang: 'de-DE', localService: true, default: true },
+  { name: 'Google US English', lang: 'en-US', localService: false, default: false },
+];
+window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+  speak(u) { window.__spoken.push({ text: u.text, voice: u.voice && u.voice.name, lang: u.lang, rate: u.rate, pitch: u.pitch, volume: u.volume }); },
+  cancel() { window.__cancelled++; },
+  getVoices() { return window.__voices; },
+  addEventListener() {},
+} });

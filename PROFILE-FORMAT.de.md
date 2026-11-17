@@ -168,6 +168,30 @@ Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben
 - Solange noch keine Statuszeile gelesen wurde, ist alles sichtbar. Ein fehlender Wert macht die Bedingung falsch (außer `exists: false`).
 - Wird der offene Reiter ausgeblendet, wechselt das Panel zum ersten sichtbaren Reiter.
 
+## Sprachausgabe (`speech`, optional)
+Das Panel kann neue Antworten vorlesen (Bereich *ANTWORTEN VORLESEN*, standardmäßig aus). Das Profil legt fest, wie jedes Mind klingt:
+
+```json
+"speech": {
+  "lang": "de-DE",
+  "voice": "Anna",
+  "rate": 1,
+  "pitch": 1,
+  "speakers": {
+    "Mel": { "pitch": 1.3, "rate": 1.05 },
+    "Tam": { "voice": "Daniel", "pitch": 0.8 }
+  },
+  "skip": ["^\\(OOC"]
+}
+```
+
+- `lang`, `voice`: Sprachcode und Name der Stimme (ein Teil des Namens genügt). Ohne Angabe schätzt das Panel Deutsch oder Englisch aus der Antwort und nimmt die im Panel gewählte Stimme.
+- `rate` (0,5–2) und `pitch` (0–2): Tempo und Tonhöhe dieses Minds.
+- `speakers`: Eine Zeile, die mit `Name:` beginnt (auch `**Name:**`), wird mit den Einstellungen dieser Figur gesprochen; die folgenden Zeilen behalten sie bis zur nächsten Markierung. Groß- und Kleinschreibung der Namen ist egal; unbekannte Namen werden als normaler Text gelesen.
+- `skip`: Zeilen, die auf einen dieser regulären Ausdrücke passen, werden nicht gelesen. Die `⏱`-Statuszeile, Links und Markdown-Zeichen werden nie gelesen.
+- Beim Relay werden beide Tabs beobachtet und jedes Mind nutzt den `speech`-Block seines eigenen Profils, so bekommen zwei Minds zwei Stimmen (siehe `examples/two-minds.profiles.json`).
+- Es werden nur die Stimmen des Browsers genutzt. Online-Stimmen (etwa die Google-Stimmen in Chrome) sind ausgeblendet, bis du sie im Panel erlaubst, denn dann geht der Text an den Anbieter der Stimme.
+
 ## Relay (`relay`, optional)
 Sind zwei Mind-Tabs offen, kann das Panel die letzte Antwort des einen Minds in die Chatbox des anderen kopieren (*RELAY ZWISCHEN ZWEI MINDS*).
 Die Zeile wird mit dem Profil des **Empfängers** gebaut:
