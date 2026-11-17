@@ -47,6 +47,21 @@
   const isL = (x) => isObj(x) && typeof x.en === 'string' &&
     Object.entries(x).every(([k, v]) => LANG.test(k) && typeof v === 'string');
   const pick = (x, lang) => (typeof x[lang] === 'string' ? x[lang] : x.en);
+  // speech: lang/voice Text, rate 0.5–2, pitch 0–2, speakers { Name: {voice, rate, pitch, lang} }, skip [Regex]
+  function validSpeech(s) {
+    const voiceOk = (v) => isObj(v) &&
+      ['lang', 'voice'].every((k) => v[k] == null || typeof v[k] === 'string') &&
+      (v.rate == null || (typeof v.rate === 'number' && v.rate >= 0.5 && v.rate <= 2)) &&
+      (v.pitch == null || (typeof v.pitch === 'number' && v.pitch >= 0 && v.pitch <= 2));
+    if (!voiceOk(s)) return false;
+    if (s.speakers != null && (!isObj(s.speakers) || !Object.values(s.speakers).every(voiceOk))) return false;
+    if (s.skip != null) {
+      if (!Array.isArray(s.skip)) return false;
+      for (const r of s.skip) { try { new RegExp(r); } catch { return false; } }
+    }
+    return true;
+  }
+
   function resolve(v, lang) {
     if (Array.isArray(v)) return v.map((x) => resolve(x, lang));
     if (isL(v)) return pick(v, lang);
@@ -99,6 +114,7 @@
       listRegex: "state.lists[{i}].regex is invalid.",
       stateLineBad: "stateLine must be a text with {variable} placeholders (or be left out).",
       relayBad: "relay: optional kind (capital letters) and who (\"actor\" or \"world\").",
+      speechBad: "speech: optional lang/voice (text), rate 0.5–2, pitch 0–2, speakers (name → voice/rate/pitch/lang) and skip (list of regular expressions).",
       whenBad: "{w}: when is not a valid condition (key with eq, ne, lt, lte, gt, gte, match or exists; or all, any, not).",
     },
     de: {
@@ -145,6 +161,7 @@
       listRegex: "state.lists[{i}].regex ungültig.",
       stateLineBad: "stateLine muss ein Text mit {variable}-Platzhaltern sein (oder ganz fehlen).",
       relayBad: "relay: optional kind (Großbuchstaben) und who (\"actor\" oder \"world\").",
+      speechBad: "speech: optional lang/voice (Text), rate 0,5–2, pitch 0–2, speakers (Name → voice/rate/pitch/lang) und skip (Liste regulärer Ausdrücke).",
       whenBad: "{w}: when ist keine gültige Bedingung (key mit eq, ne, lt, lte, gt, gte, match oder exists; oder all, any, not).",
     },
   };
@@ -329,6 +346,7 @@
     if (p.clock != null && typeof p.clock !== 'boolean') err('clock');
     if (p.relay != null && (!isObj(p.relay) || (p.relay.kind != null && !/^[A-ZÄÖÜ][A-ZÄÖÜ0-9_-]{1,20}$/.test(p.relay.kind)) ||
         (p.relay.who != null && !['actor', 'world'].includes(p.relay.who)))) err('relayBad');
+    if (p.speech != null && !validSpeech(p.speech)) err('speechBad');
     return { ok: !errors.length, errors };
   }
 

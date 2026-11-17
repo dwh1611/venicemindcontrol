@@ -71,6 +71,14 @@ ok('has validates', P.validate(base({ tabs: [{ id: 'a', label: 'A', when: { key:
   ok('neither mindIds nor titleMatch is an error', r.ok === false && r.errors.some((e) => e.k === 'needIdOrTitle') && !r.errors.some((e) => e.k === 'mindIds'), r.errors);
   ok('mindIds must be a list when given', P.validate(base({ mindIds: 'ABCDE12' })).ok === false);
 }
+// speech (#28)
+ok('speech: valid block', P.validate(base({ speech: { lang: 'en-US', voice: 'Alex', rate: 1, pitch: 1.2, speakers: { Mel: { pitch: 1.3 } }, skip: ['^\\(OOC'] } })).ok === true);
+ok('speech: rate out of range', P.validate(base({ speech: { rate: 3 } })).ok === false);
+ok('speech: pitch must be a number', P.validate(base({ speech: { pitch: 'high' } })).ok === false);
+ok('speech: speaker entries are checked', P.validate(base({ speech: { speakers: { Mel: { rate: 0.1 } } } })).ok === false);
+ok('speech: bad regular expression', P.validate(base({ speech: { skip: ['('] } })).ok === false);
+ok('speech: not an object', P.validate(base({ speech: 'loud' })).ok === false);
+
 // Mind-IDs: lokale Minds, Katalog-Minds (Slug) und eingefügte URLs
 ok('url: local mind', P.mindIdFromUrl('https://venice.ai/chat/minds/local/AbC12xY/9fk2lm') === 'AbC12xY');
 ok('url: catalog mind slug', P.mindIdFromUrl('https://venice.ai/chat/minds/mel-taminda-an-interactive-story-3281/bnOmuOw') === 'mel-taminda-an-interactive-story-3281');

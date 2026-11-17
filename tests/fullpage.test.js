@@ -11,6 +11,17 @@ run(async () => {
   await wait(200);
   const created = await ev(`window.__created`);
   ok('panel: opens page in tab mode with current tab', created && created[0] === 'chrome-extension://test/sidepanel.html?mode=tab&tab=1', created);
+  // Oberflächen-Zoom: Schritte, Grenzen, Speicherung, Zurücksetzen
+  const z = () => ev(`document.body.style.getPropertyValue('--ui')`);
+  await ev(`document.getElementById('zoomIn').click();document.getElementById('zoomIn').click();0`);
+  ok('zoom: two steps up', (await z()) === '1.2' && (await ev(`document.getElementById('zoomReset').textContent`)) === '120%', await z());
+  ok('zoom: stored', (await ev(`window.__store.uiZoom`)) === 1.2);
+  await ev(`for(let i=0;i<20;i++)document.getElementById('zoomIn').click();0`);
+  ok('zoom: upper limit', (await z()) === '1.8');
+  await ev(`for(let i=0;i<30;i++)document.getElementById('zoomOut').click();0`);
+  ok('zoom: lower limit', (await z()) === '0.7');
+  await ev(`document.getElementById('zoomReset').click();0`);
+  ok('zoom: reset', (await z()) === '1' && (await ev(`window.__store.uiZoom`)) === 1);
   P.win.hide();
 
   // 2) Im Vollbild: Auswahl sichtbar, zweiter Venice-Tab wählbar, Senden geht an den gewählten Tab.
