@@ -7,5 +7,5 @@ mkdir -p dist
 OUT="dist/mind-console-$V.zip"
 rm -f "$OUT"
 zip -r -X "$OUT" manifest.json background.js content.js speech.js assistant.js world.js i18n.js sidepanel.html sidepanel.css sidepanel.js profiles icons \
-  PROMPT-Profile-Generator.md PROMPT-Profile-Generator.de.md examples -x "*.DS_Store"
+  LICENSE PROMPT-Profile-Generator.md PROMPT-Profile-Generator.de.md examples -x "*.DS_Store"
 echo "OK: $OUT"; unzip -l "$OUT" | tail -1
