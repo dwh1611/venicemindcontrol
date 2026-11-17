@@ -9,7 +9,7 @@ Das Mind liest diese Zeilen als Spielzüge, das Panel liest die Statuszeile der 
 Die Erweiterung erkennt das Mind im aktiven Tab selbst und lädt dessen **Profil**. Profile sind reine Daten (JSON), eigene
 Profile lassen sich im Panel hochladen. Eingebaut sind zwei Profile: *Nightingale* (Agentin und Operator) und *Ghostline* (Hacker).
 
-> Stand: v1.3.0. Die automatischen Tests laufen in einem Headless-Electron mit nachgebautem `chrome`-Objekt; die wichtigsten Funktionen hat der Autor auch in einem echten Chrome gegen die
+> Stand: v1.4.0. Die automatischen Tests laufen in einem Headless-Electron mit nachgebautem `chrome`-Objekt; die wichtigsten Funktionen hat der Autor auch in einem echten Chrome gegen die
 > echte Venice-Seite ausprobiert. Siehe [Tests und Grenzen](#tests-und-grenzen).
 
 ## Inhalt
