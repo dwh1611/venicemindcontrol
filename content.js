@@ -211,6 +211,9 @@
   }
 
   const themeKey = () => `${profile.id}:theme`;
+  const locKey = () => `${profile.id}:locTheme`;
+  let locTheme = null; // Farben des aktuellen Ortes (vom Panel gesetzt, v1.3), überlagern profile.theme
+  const rebuildCss = () => { styleEl.textContent = profile ? buildCss(locTheme ? { ...profile, theme: { ...profile.theme, ...locTheme } } : profile) : ''; };
 
   function setProfile(p) {
     if ((p && p.id) === (profile && profile.id)) return;
@@ -219,11 +222,14 @@
     profile = p;
     lastState = '';
     cfg = null;
-    styleEl.textContent = p ? buildCss(p) : '';
+    locTheme = null;
+    rebuildCss();
     if (!p) { applyCfg(); return; }
     try {
-      chrome.storage.local.get(themeKey(), (s) => {
+      chrome.storage.local.get([themeKey(), locKey()], (s) => {
         cfg = { ...DEFAULTS, ...((s && s[themeKey()]) || {}) };
+        locTheme = (s && s[locKey()]) || null;
+        rebuildCss();
         applyCfg();
       });
     } catch { cfg = { ...DEFAULTS }; applyCfg(); }
@@ -349,6 +355,7 @@
       }
       if (ch.mindMap) { mindMap = ch.mindMap.newValue || {}; refresh(); }
       if (profile && ch[themeKey()]) { cfg = { ...DEFAULTS, ...(ch[themeKey()].newValue || {}) }; applyCfg(); }
+      if (profile && ch[locKey()]) { locTheme = ch[locKey()].newValue || null; rebuildCss(); }
     });
   } catch { refresh(); }
 
