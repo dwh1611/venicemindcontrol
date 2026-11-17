@@ -1,0 +1,429 @@
+{
+  "id": "mansion",
+  "name": "Mansion",
+  "mindIds": [
+    "YOUR-MIND-ID"
+  ],
+  "defaultTime": "21:00",
+  "prefixes": {
+    "actor": "PLAYER",
+    "world": "WORLD"
+  },
+  "theme": {
+    "fg": "#c9b27a",
+    "dim": "#8f7d52",
+    "mut": "#8a8270",
+    "line": "#3a3220",
+    "bg": "#0a0805",
+    "bg2": "#14100a",
+    "deep": "#060503",
+    "ink": "#1a1408",
+    "warn": "#ffb000",
+    "err": "#ff5252",
+    "txt": "#eadfc2",
+    "glow": "201,178,122"
+  },
+  "header": {
+    "logo": "M A N S I O N",
+    "meta": [
+      [
+        "CASE ",
+        "One night · ● OPEN"
+      ]
+    ],
+    "prompt": "guest@mansion:~#"
+  },
+  "eventKinds": {
+    "GO": "#c9b27a",
+    "CHOICE": "#6cc8ff",
+    "FIND": "#5fe08a",
+    "CORRECTION": "#ff5252"
+  },
+  "state": {
+    "parts": [
+      {
+        "key": "loc",
+        "icon": "📍"
+      }
+    ],
+    "numbers": [
+      {
+        "key": "hp",
+        "regex": "HP\\s*(\\d{1,2})",
+        "icon": "❤",
+        "unit": ""
+      }
+    ],
+    "lists": [
+      {
+        "key": "pack",
+        "regex": "Pack:\\s*([^·\\n]+)",
+        "icon": "🎒"
+      }
+    ]
+  },
+  "variables": {
+    "hp": {
+      "label": "HP",
+      "value": 8,
+      "min": 0,
+      "max": 10,
+      "icon": "❤"
+    },
+    "pack": {
+      "type": "list",
+      "label": {
+        "en": "Pack",
+        "de": "Rucksack"
+      },
+      "value": [
+        "lantern"
+      ]
+    }
+  },
+  "locations": {
+    "key": "loc",
+    "start": "hall",
+    "minutes": 3,
+    "items": [
+      {
+        "id": "hall",
+        "label": {
+          "en": "Hall",
+          "de": "Halle"
+        },
+        "match": "hall|foyer|halle",
+        "hint": {
+          "en": "Cold marble, a ticking clock.",
+          "de": "Kalter Marmor, eine tickende Uhr."
+        },
+        "neighbours": [
+          "library",
+          "kitchen",
+          {
+            "id": "cellar",
+            "minutes": 8
+          }
+        ]
+      },
+      {
+        "id": "library",
+        "label": {
+          "en": "Library",
+          "de": "Bibliothek"
+        },
+        "match": "librar|bibliothek",
+        "hint": {
+          "en": "Dust and old paper.",
+          "de": "Staub und altes Papier."
+        },
+        "neighbours": [
+          "hall"
+        ],
+        "theme": {
+          "fg": "#7fb4ff",
+          "dim": "#4a7fc4",
+          "line": "#1b3555",
+          "bg": "#05080d",
+          "bg2": "#0a121d",
+          "glow": "108,170,255"
+        }
+      },
+      {
+        "id": "kitchen",
+        "label": {
+          "en": "Kitchen",
+          "de": "Küche"
+        },
+        "match": "kitchen|küche",
+        "neighbours": [
+          "hall"
+        ]
+      },
+      {
+        "id": "cellar",
+        "label": {
+          "en": "Cellar",
+          "de": "Keller"
+        },
+        "match": "cellar|keller",
+        "hint": {
+          "en": "Damp. Something drips.",
+          "de": "Feucht. Irgendetwas tropft."
+        },
+        "neighbours": [
+          "hall"
+        ],
+        "theme": {
+          "fg": "#7be0a0",
+          "dim": "#4a9c6a",
+          "line": "#1b3f2a",
+          "bg": "#050d08",
+          "bg2": "#0a1a10",
+          "glow": "123,224,160"
+        }
+      }
+    ]
+  },
+  "quests": [
+    {
+      "id": "key",
+      "label": {
+        "en": "Find the cellar key",
+        "de": "Den Kellerschlüssel finden"
+      }
+    },
+    {
+      "id": "cellar",
+      "label": {
+        "en": "Open the cellar",
+        "de": "Den Keller öffnen"
+      },
+      "text": {
+        "en": "needs the key",
+        "de": "braucht den Schlüssel"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "gong",
+      "at": "21:30",
+      "kind": "RING",
+      "text": {
+        "en": "A gong sounds somewhere in the house.",
+        "de": "Irgendwo im Haus schlägt ein Gong."
+      },
+      "when": {
+        "key": "quest.key",
+        "eq": "done"
+      }
+    }
+  ],
+  "choices": {
+    "cap": {
+      "en": "WHAT NOW",
+      "de": "WAS NUN"
+    },
+    "action": {
+      "who": "actor",
+      "parts": [
+        "CHOICE",
+        "{item}"
+      ]
+    }
+  },
+  "suggest": [
+    {
+      "pattern": "(?:you lose|du verlierst) (\\d+) (?:HP|LP)",
+      "add": {
+        "hp": "-{g1}"
+      },
+      "label": {
+        "en": "Damage",
+        "de": "Schaden"
+      }
+    },
+    {
+      "pattern": "you find (?:a |an |the )?([A-Za-z ]+?)(?:[.,]|$)",
+      "push": {
+        "pack": "{g1}"
+      },
+      "label": {
+        "en": "Loot",
+        "de": "Fund"
+      }
+    }
+  ],
+  "guard": {
+    "items": [
+      {
+        "key": "hp",
+        "var": "hp",
+        "label": "HP"
+      },
+      {
+        "key": "pack",
+        "var": "pack"
+      },
+      {
+        "key": "loc",
+        "location": true,
+        "label": {
+          "en": "Place",
+          "de": "Ort"
+        }
+      }
+    ]
+  },
+  "correction": {
+    "kind": "CORRECTION",
+    "text": "Your status line does not match the real state. Please correct it and continue from the state below.",
+    "undo": "The previous message is withdrawn. Please ignore it and continue from the state below."
+  },
+  "statusRight": "❤ {hp|—}",
+  "tabs": [
+    {
+      "id": "move",
+      "label": {
+        "en": "MOVE",
+        "de": "BEWEGEN"
+      },
+      "blocks": [
+        {
+          "type": "travel",
+          "cap": {
+            "en": "GO TO",
+            "de": "GEHE ZU"
+          },
+          "empty": {
+            "en": "No way out from here.",
+            "de": "Von hier führt kein Weg weiter."
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "GO",
+              "{item}"
+            ],
+            "shift": true
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "SEARCH",
+            "de": "SUCHEN"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Search the room",
+                "de": "Raum durchsuchen"
+              },
+              "m": 10
+            }
+          ],
+          "action": {
+            "who": "actor",
+            "parts": [
+              "SEARCH"
+            ],
+            "body": [
+              "{item}"
+            ],
+            "shift": true,
+            "roll": {
+              "dice": "d20",
+              "vs": 12,
+              "success": "FOUND",
+              "failure": "NOTHING"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "act",
+      "label": {
+        "en": "ACT",
+        "de": "AKTION"
+      },
+      "blocks": [
+        {
+          "type": "grid",
+          "cap": {
+            "en": "USE",
+            "de": "BENUTZEN"
+          },
+          "itemsFrom": "pack",
+          "empty": {
+            "en": "(pack is empty)",
+            "de": "(Rucksack ist leer)"
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "USE"
+            ],
+            "body": [
+              "{item}"
+            ],
+            "remove": {
+              "pack": "{item}"
+            }
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "QUESTS",
+            "de": "QUESTS"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Take the key",
+                "de": "Schlüssel nehmen"
+              }
+            }
+          ],
+          "when": {
+            "key": "location",
+            "eq": "library"
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "TAKE"
+            ],
+            "body": [
+              "{item}"
+            ],
+            "push": {
+              "pack": "cellar key"
+            },
+            "quest": {
+              "key": "done"
+            }
+          }
+        },
+        {
+          "type": "grid",
+          "cap": {
+            "en": "CELLAR",
+            "de": "KELLER"
+          },
+          "items": [
+            {
+              "label": {
+                "en": "Unlock the door",
+                "de": "Tür aufschließen"
+              }
+            }
+          ],
+          "when": {
+            "key": "location",
+            "eq": "cellar"
+          },
+          "action": {
+            "who": "actor",
+            "parts": [
+              "UNLOCK"
+            ],
+            "body": [
+              "{item}"
+            ],
+            "remove": {
+              "pack": "cellar key"
+            },
+            "quest": {
+              "cellar": "done"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "convention": "Lines in square brackets starting with \"{hp}\" are the guest's actions: GO = the guest walks to another room, SEARCH = the guest searches the room, CHOICE = the guest picks one of your numbered options, USE/TAKE/UNLOCK = handling objects. Lines starting with \"{wp}\" are events that do not come from the guest: RING = a sound in the house, CORRECTION = the real state, which wins over your own. The time in each line is the current in-world time and never runs backwards. Free text below the lines is the guest speaking or acting. End every numbered choice list with a status line in this exact form: ⏱ HH:MM · 📍 Room · HP 8 · Pack: lantern, key"
+}

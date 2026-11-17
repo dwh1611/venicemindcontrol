@@ -13,6 +13,7 @@ Import a file in the panel under **PROFILES → IMPORT (.json)**. Every example 
 | [`netrunner.profile.json`](netrunner.profile.json) | Hacker (fictional) | Terminal look, required field, buttons that only appear above a trace value (`when`). |
 | [`survival.profile.json`](survival.profile.json) | Survival game | HUD values and conditional buttons and tabs (`when`), time jumps with "until dawn". |
 | [`adventure.profile.json`](adventure.profile.json) | Adventure with rules | The v1.2 features together: game state (HP, gold, pack) with a state line, dice with a target value, random tables, scheduled events, buttons built from the pack, conditional buttons and tab. |
+| [`mansion.profile.json`](mansion.profile.json) | Haunted house (bilingual) | The v1.3 world features: places with a *Go to* block, travel time and a theme per place, quests that unlock buttons and events, choices from numbered replies, suggested changes and the state guard. |
 | [`slash-commands.profile.json`](slash-commands.profile.json) | Commands | Raw lines without brackets or clock for chat commands. |
 | [`two-minds.profiles.json`](two-minds.profiles.json) | Two Minds | Two profiles in one file (game master and character) with the `relay` field for the relay between two tabs. |
 

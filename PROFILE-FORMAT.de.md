@@ -55,6 +55,7 @@ Ein Reiter hat `id`, `label` und `blocks`. Block-Typen:
 - `{"type":"compose","kindLabel":"","whoLabel":"","textLabel":"","kinds":{"ART":{"who":"Platzhalter","text":"Platzhalter","quick":["…"]}},"action":ACTION}`
   Formular mit Art, Absender, Inhalt und Schnelltexten.
 - `{"type":"scenarios"}` zeigt die Einsatz-Auswahl (nur mit `scenarios`).
+- `{"type":"travel","cap":"GEHE ZU","action":ACTION}` ein Button je Nachbar des aktuellen Ortes (nur mit `locations`, siehe [Welt](#welt-v13)).
 
 ## ACTION
 ```json
@@ -76,6 +77,7 @@ Ein Reiter hat `id`, `label` und `blocks`. Block-Typen:
 - `requires` / `requiresAny`: Pflichtangaben. Fehlt etwas, erscheint `msg` und nichts wird eingereiht.
 - `omitKinds`: Arten, bei denen `{kind}` leer bleibt.
 - `shift`: rückt die Uhr um `m` Minuten (oder bis `until`) vor. Platzhalter `{until_minutes}` ist nur bei `until` gefüllt.
+- `quest`: `{ "questId": "done" }` setzt Quests (siehe [Quests](#quests-quests)).
 
 Platzhalter: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (Reiter-Felder), `{kind}`, `{who}`, `{text}` (compose), `{until_minutes}`.
 
@@ -153,6 +155,62 @@ Eine Aktion mit `"table": "weather"` wählt einen Eintrag (`weight` ist standard
 - Listen aus der Statuszeile: `state.lists`: `{ "key": "seen", "regex": "Seen:\\s*([^·\\n]+)", "sep": "," }`. Gruppe 1 wird an `sep` (Standard `,`) getrennt.
 - `when` kennt `{ "key": "items", "has": "key" }` für Listen (und Text, der ein Wort enthält).
 
+## Welt (v1.3)
+Optionale Teile für Orte, Auswahl, Abweichungs-Check, Vorschläge und Quests. Alle sind optional und lassen sich mit allem Obigen kombinieren.
+
+### Orte (`locations`) und der Block `travel`
+```json
+"locations": {
+  "key": "loc", "start": "hall", "minutes": 3,
+  "items": [
+    { "id": "hall", "label": "Halle", "match": "halle|foyer", "hint": "Kalter Marmor.",
+      "neighbours": ["library", { "id": "cellar", "minutes": 8 }],
+      "theme": { "fg": "#7fb4ff", "glow": "108,170,255" },
+      "audio": "https://example.org/rain.mp3", "image": "https://example.org/hall.jpg" },
+    { "id": "library", "label": "Bibliothek", "neighbours": ["hall"] },
+    { "id": "cellar", "label": "Keller", "neighbours": ["hall"] }
+  ]
+}
+```
+- `items`: die Orte. `id` (a–z, 0–9, `_`, `-`) und `label` sind Pflicht. `neighbours` nennt die ids, zu denen man gehen kann, als Text oder als `{ "id", "minutes" }` mit eigener Reisezeit. Der Validator meldet Nachbarn und `start`, die kein Ort sind.
+- `key` (Standard `loc`): der Wert der Statuszeile, der den aktuellen Ort nennt. Er wird mit dem `match` des Ortes (regulärer Ausdruck), seiner `id` oder seinem `label` verglichen. `start` ist der Ort, bevor eine Statuszeile gelesen wurde. `minutes` ist die Standard-Reisezeit.
+- Das Panel merkt sich den aktuellen Ort. Ein **neuer** Wert in der Statuszeile verschiebt ihn; ein unveränderter Wert macht einen Schritt im Panel nicht rückgängig. Schlüssel für Bedingungen: `location` (die id).
+- Der Block `{ "type": "travel", "cap": "GEHE ZU", "empty": "…", "action": ACTION }` zeigt einen Button je Nachbar des aktuellen Ortes. In der Aktion ist `{item}` das Ziel, `{item.id}` seine id, `{from}` der aktuelle Ort und `m` die Reisezeit; mit `"shift": true` läuft die Uhr weiter und geplante Ereignisse feuern.
+- `theme`: Farben, die das Profil-Theme ersetzen, solange du an diesem Ort bist (beliebige Theme-Schlüssel, `glow` als `"r,g,b"`). Sie gelten im Panel und auf der Chat-Seite und ändern sich ohne Neuladen.
+- `hint`: eine Zeile unter dem Ortsnamen. `audio` und `image` (https-Links, nichts wird mitgeliefert): optional eine Ambiente-Schleife und ein Bild. Beides ist **standardmäßig aus**; das Panel zeigt einen Schalter *Ambiente*, eine Stumm-Taste und einen Lautstärkeregler. Beim Einschalten kontaktiert der Browser den Host dieser Links (siehe [Datenschutz](PRIVACY.de.md)).
+
+### Auswahl aus der Antwort (`choices`)
+```json
+"choices": { "cap": "WAS NUN", "max": 8, "pattern": "^>>\\s*(.+)$",
+  "action": { "who": "actor", "parts": ["CHOICE", "{item}"] } }
+```
+Endet die letzte Antwort in nummerierten (`1.`, `1)`), gebuchstabten (`A)`) oder aufgezählten Optionen, erscheinen sie als Buttons. Ein Klick reiht die Aktion mit `{item}` (der Text) und `{n}` (Nummer oder Buchstabe) ein. Die Erkennung schaut auf das Ende der Antwort (höchstens zwei Zeilen dürfen der Liste folgen), ignoriert die `⏱`-Zeile und braucht mindestens zwei Optionen in der richtigen Reihenfolge. Mit `pattern` ist jede passende Zeile eine Option (Gruppe 1 = Text, optional Gruppe 2 = Kennung). Wird nichts gefunden, bleibt die Leiste leer.
+
+### State-Guard (`guard`) und `correction`
+```json
+"guard": { "items": [ { "key": "hp", "var": "hp" }, { "key": "pack", "var": "pack" }, { "key": "loc", "location": true } ] },
+"correction": { "kind": "CORRECTION", "text": "Deine Statuszeile passt nicht zum echten Zustand.", "undo": "Ignoriere meine letzte Nachricht." }
+```
+Weicht eine neue Statuszeile vom Panel ab (eine Zahl gegen eine Variable, eine Liste gegen eine Listen-Variable, ein Ort gegen den aktuellen Ort), listet eine Warnung die Unterschiede. **KORREKTUR SENDEN** reiht eine Zeile ein (`kind`, `text`, die Werte des Panels) und sendet nie von selbst. `correction` legt auch die Zeile für *SENDEN ZURÜCK* fest (`undo`). Die Texte stehen in der Sprache des Minds; die Vorgaben sind englisch.
+
+### Vorgeschlagene Änderungen (`suggest`)
+```json
+"suggest": [
+  { "pattern": "du verlierst (\\d+) LP", "add": { "hp": "-{g1}" }, "label": "Schaden" },
+  { "pattern": "du findest (?:einen |eine |ein )?([^.\\n]+)", "push": { "pack": "{g1}" } }
+]
+```
+Die letzte Antwort wird für jedes `pattern` durchsucht (Groß-/Kleinschreibung egal, alle Treffer). Jeder Treffer wird zu einem Vorschlag mit denselben Wirkungen wie eine Aktion (`set`, `add`, `push`, `remove`, `quest`); `{g1}`, `{g2}` … sind die Gruppen. **ÜBERNEHMEN** ändert den Zustand, **×** verwirft. Nichts wird still angewendet.
+
+### Quests (`quests`)
+```json
+"quests": [ { "id": "key", "label": "Schlüssel finden", "text": "in der Bibliothek", "state": "open" } ]
+```
+Zustände: `open`, `active`, `done`, `failed`. Das Panel zeigt die Liste mit einer Auswahl. Eine Aktion setzt eine Quest mit `"quest": { "key": "done" }`. In Bedingungen gibt es `quest.<id>` (der Zustand), `questsDone` und `questsActive` (Zähler); geplante `events` dürfen ein `when` tragen und erscheinen dann erst, wenn eine Quest erledigt ist. In Texten ist `{quest.<id>}` der Zustand.
+
+### Änderungslog, Rückgängig, Neu würfeln, Zweige
+Keine Profilfelder, sondern Teil des Panels: Jede Änderung einer Aktion steht im **Änderungslog** (*SPIELZUSTAND*) und lässt sich einzeln zurücknehmen; eine eingereihte Zeile zu entfernen oder *LEEREN* nimmt ihre Änderungen zurück. **NEU WÜRFELN** wiederholt die letzte Aktion mit neuem Wurf oder neuer Tabellenwahl und ersetzt ihre Wirkungen und ihre eingereihte Zeile. **SENDEN ZURÜCK** setzt Warteschlange, Uhr, Verlauf und Zustand auf den Stand direkt vor dem letzten Senden zurück; bereits gesendeter Text bleibt im Venice-Chat. **ZWEIG** an einem Spielstand lädt ihn und spielt unter neuem Namen weiter, das Original bleibt unberührt.
+
 ## Bedingungen (`when`)
 Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben. Sie wird gegen die zuletzt gelesene Statuszeile
 (die HUD-Werte) geprüft, so erscheinen Buttons nur, wenn sie sinnvoll sind:
@@ -162,7 +220,7 @@ Reiter, Blöcke und Grid-Einträge (Objekte) dürfen eine Bedingung `when` haben
 { "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
 ```
 
-- `key` ist ein Status-Schlüssel (ein `parts`-, `numbers`-, `meters`- oder `lists`-Schlüssel aus `state`, dazu `time`; Meter haben auch `<key>Max`) oder eine Variable aus `variables`. Variablen zählen immer und haben Vorrang vor einem Status-Schlüssel gleichen Namens.
+- `key` ist ein Status-Schlüssel (ein `parts`-, `numbers`-, `meters`- oder `lists`-Schlüssel aus `state`, dazu `time`; Meter haben auch `<key>Max`) oder eine Variable aus `variables`, dazu `location` (die id des aktuellen Ortes) sowie `quest.<id>`, `questsDone`, `questsActive` (siehe [Welt](#welt-v13)). Variablen zählen immer und haben Vorrang vor einem Status-Schlüssel gleichen Namens.
 - Genau ein Operator je Bedingung: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (Zahlen oder Text), `match` (regulärer Ausdruck), `has` (Liste enthält einen Wert oder Text enthält ein Wort), `exists` (`true`/`false`).
 - Verknüpfen mit `all` (und), `any` (oder) und `not`.
 - Solange noch keine Statuszeile gelesen wurde, ist alles sichtbar. Ein fehlender Wert macht die Bedingung falsch (außer `exists: false`).

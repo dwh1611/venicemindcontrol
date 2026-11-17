@@ -11,7 +11,10 @@
   const RGB = /^\d{1,3},\s*\d{1,3},\s*\d{1,3}$/;
   const KIND = /^[\wÄÖÜäöüß-]{1,24}$/;
   const ID = /^[a-z0-9][a-z0-9_-]{1,31}$/;
-  const BLOCKS = ['hint', 'field', 'row', 'grid', 'compose', 'scenarios'];
+  const BLOCKS = ['hint', 'field', 'row', 'grid', 'compose', 'scenarios', 'travel'];
+  const QUEST_STATES = ['open', 'active', 'done', 'failed'];
+  const LOCID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+  const URLS = /^https:\/\/\S+$/;
   const THEME_KEYS = ['fg', 'dim', 'mut', 'line', 'bg', 'bg2', 'deep', 'ink', 'warn', 'err', 'txt'];
 
   const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
@@ -116,6 +119,19 @@
       relayBad: "relay: optional kind (capital letters) and who (\"actor\" or \"world\").",
       speechBad: "speech: optional lang/voice (text), rate 0.5–2, pitch 0–2, speakers (name → voice/rate/pitch/lang) and skip (list of regular expressions).",
       whenBad: "{w}: when is not a valid condition (key with eq, ne, lt, lte, gt, gte, match or exists; or all, any, not).",
+      locBad: "locations: needs items (a list of places with id and label); optional key (status key), start, minutes (0–1440).",
+      locItem: "locations.items[{i}]: id (a–z, 0–9, _ -), label, optional match (regular expression), hint, neighbours, theme, audio/image (https:// links).",
+      locDup: "locations.items[{i}]: id \"{id}\" is used twice.",
+      locNeighbour: "locations.items[{i}]: neighbour \"{id}\" is not a place in locations.items.",
+      locStart: "locations.start: \"{id}\" is not a place in locations.items.",
+      travelNeedsLoc: "{w}: a travel block needs the locations section.",
+      choicesBad: "choices: needs an action with parts; optional pattern (regular expression, group 1 = text, group 2 = key), max (1–20), cap.",
+      guardBad: "guard: items is a list of { key, var } (a variable) or { key, location: true }; optional label.",
+      guardVar: "guard.items[{i}]: variable \"{k}\" is not defined in variables.",
+      correctionBad: "correction: optional kind (capital letters), text and undo (texts).",
+      suggestBad: "suggest[{i}]: pattern (regular expression) and at least one of set, add, push, remove or quest are required; label is optional.",
+      questsBad: "quests: list of { id, label } with optional text and state (open, active, done, failed); ids must be unique.",
+      questMissing: "{w}: quest \"{k}\" is not defined in quests, or the state is not open, active, done or failed.",
     },
     de: {
       notObj: "Die Datei enthält kein Profil-Objekt.",
@@ -163,6 +179,19 @@
       relayBad: "relay: optional kind (Großbuchstaben) und who (\"actor\" oder \"world\").",
       speechBad: "speech: optional lang/voice (Text), rate 0,5–2, pitch 0–2, speakers (Name → voice/rate/pitch/lang) und skip (Liste regulärer Ausdrücke).",
       whenBad: "{w}: when ist keine gültige Bedingung (key mit eq, ne, lt, lte, gt, gte, match oder exists; oder all, any, not).",
+      locBad: "locations: braucht items (Liste von Orten mit id und label); optional key (Statusschlüssel), start, minutes (0–1440).",
+      locItem: "locations.items[{i}]: id (a–z, 0–9, _ -), label, optional match (regulärer Ausdruck), hint, neighbours, theme, audio/image (https://-Links).",
+      locDup: "locations.items[{i}]: id \"{id}\" doppelt.",
+      locNeighbour: "locations.items[{i}]: Nachbar \"{id}\" ist kein Ort in locations.items.",
+      locStart: "locations.start: \"{id}\" ist kein Ort in locations.items.",
+      travelNeedsLoc: "{w}: ein travel-Block braucht den Abschnitt locations.",
+      choicesBad: "choices: braucht eine action mit parts; optional pattern (regulärer Ausdruck, Gruppe 1 = Text, Gruppe 2 = Kennung), max (1–20), cap.",
+      guardBad: "guard: items ist eine Liste aus { key, var } (Variable) oder { key, location: true }; optional label.",
+      guardVar: "guard.items[{i}]: Variable \"{k}\" ist in variables nicht definiert.",
+      correctionBad: "correction: optional kind (Großbuchstaben), text und undo (Texte).",
+      suggestBad: "suggest[{i}]: pattern (regulärer Ausdruck) und mindestens eines von set, add, push, remove oder quest sind nötig; label ist optional.",
+      questsBad: "quests: Liste aus { id, label } mit optional text und state (open, active, done, failed); ids eindeutig.",
+      questMissing: "{w}: Quest \"{k}\" ist in quests nicht definiert, oder der Zustand ist nicht open, active, done oder failed.",
     },
   };
   const explain = (errors, lang) => (errors || []).map((e) => {
@@ -275,6 +304,39 @@
         if (!good) err('tableBad', { k });
       });
     }
+    const questIds = new Set();
+    if (p.quests != null) {
+      if (!Array.isArray(p.quests) || !p.quests.length) err('questsBad');
+      else p.quests.forEach((q) => {
+        const good = isObj(q) && typeof q.id === 'string' && VAR.test(q.id) && typeof q.label === 'string' && q.label.trim() &&
+          (q.text == null || typeof q.text === 'string') && (q.state == null || QUEST_STATES.includes(q.state)) && !questIds.has(q.id);
+        if (!good) err('questsBad'); else questIds.add(q.id);
+      });
+    }
+    const locIds = new Set();
+    const L = p.locations;
+    if (L != null) {
+      if (!isObj(L) || !Array.isArray(L.items) || !L.items.length || (L.key != null && !/^[A-Za-z][\w-]{0,23}$/.test(L.key)) ||
+          (L.minutes != null && !(typeof L.minutes === 'number' && L.minutes >= 0 && L.minutes <= 1440)) || (L.start != null && typeof L.start !== 'string')) err('locBad');
+      else {
+        L.items.forEach((it, i) => {
+          const th = isObj(it) && it.theme;
+          const themeOk = !th || (isObj(th) && Object.entries(th).every(([k, v]) => (k === 'glow' ? RGB.test(v || '') : THEME_KEYS.includes(k) && HEX.test(v || ''))));
+          let matchOk = true; if (isObj(it) && it.match != null) { try { rx(it.match); } catch { matchOk = false; } }
+          const good = isObj(it) && typeof it.id === 'string' && LOCID.test(it.id) && typeof it.label === 'string' && it.label.trim() && matchOk && themeOk &&
+            (it.hint == null || typeof it.hint === 'string') && (it.audio == null || URLS.test(it.audio)) && (it.image == null || URLS.test(it.image)) &&
+            (it.neighbours == null || (Array.isArray(it.neighbours) && it.neighbours.every((n) => typeof n === 'string' || (isObj(n) && typeof n.id === 'string' && (n.minutes == null || (typeof n.minutes === 'number' && n.minutes >= 0 && n.minutes <= 1440))))));
+          if (!good) { err('locItem', { i }); return; }
+          if (locIds.has(it.id)) err('locDup', { i, id: it.id });
+          locIds.add(it.id);
+        });
+        L.items.forEach((it, i) => (isObj(it) && Array.isArray(it.neighbours) ? it.neighbours : []).forEach((n) => {
+          const id = typeof n === 'string' ? n : n && n.id;
+          if (typeof id === 'string' && !locIds.has(id)) err('locNeighbour', { i, id });
+        }));
+        if (L.start != null && !locIds.has(L.start)) err('locStart', { id: L.start });
+      }
+    }
     const stateLists = ((p.state || {}).lists || []).map((l) => l.key);
     const typeOf = (k) => (vars[k] ? (vars[k].type === 'list' ? 'list' : 'number') : null);
     const checkAction = (a, w) => {
@@ -286,6 +348,10 @@
         if (!isObj(r) || typeof dice !== 'string' || (!hasTpl(dice) && !parseDice(dice)) || !num(r.mod) || !num(r.vs)) err('rollBad', { w });
       }
       if (a.table != null && !hasTpl(String(a.table)) && !(a.table in tables)) err('tableMissing', { w, k: a.table });
+      if (a.quest != null) {
+        if (!isObj(a.quest)) err('fxBad', { w });
+        else Object.entries(a.quest).forEach(([k, v]) => { if (!questIds.has(k) || (!QUEST_STATES.includes(v) && !hasTpl(v))) err('questMissing', { w, k }); });
+      }
       ['set', 'add', 'push', 'remove'].forEach((fx) => {
         if (a[fx] == null) return;
         if (!isObj(a[fx])) { err('fxBad', { w }); return; }
@@ -302,6 +368,7 @@
       else p.events.forEach((e, i) => {
         const timed = isObj(e) && ((typeof e.at === 'string' && /^\d{1,2}:\d{2}$/.test(e.at)) !== (typeof e.in === 'number' && e.in >= 0));
         if (!isObj(e) || typeof e.id !== 'string' || !e.id || !KIND.test(String(e.kind || '')) || typeof e.text !== 'string' || !e.text.trim() || !timed) { err('eventBad', { i }); return; }
+        if (e.when != null && !validCond(e.when)) err('whenBad', { w: `events[${i}]` });
         if (ids.has(e.id)) err('eventDup', { i, id: e.id });
         ids.add(e.id);
       });
@@ -334,6 +401,10 @@
             if (!isObj(b.kinds) || !Object.keys(b.kinds).length) err('kindsMissing', { w });
             if (!isObj(b.action) || !Array.isArray(b.action.parts)) err('actionParts', { w });
           }
+          if (b.type === 'travel') {
+            if (!p.locations) err('travelNeedsLoc', { w });
+            if (!isObj(b.action) || !Array.isArray(b.action.parts)) err('actionParts', { w });
+          }
           if (b.type === 'field' && !b.id) err('fieldId', { w });
         });
       });
@@ -347,6 +418,31 @@
     if (p.relay != null && (!isObj(p.relay) || (p.relay.kind != null && !/^[A-ZÄÖÜ][A-ZÄÖÜ0-9_-]{1,20}$/.test(p.relay.kind)) ||
         (p.relay.who != null && !['actor', 'world'].includes(p.relay.who)))) err('relayBad');
     if (p.speech != null && !validSpeech(p.speech)) err('speechBad');
+    if (p.choices != null) {
+      const c = p.choices;
+      let good = isObj(c) && isObj(c.action) && Array.isArray(c.action.parts) && (c.max == null || (Number.isInteger(c.max) && c.max >= 1 && c.max <= 20)) && (c.cap == null || typeof c.cap === 'string');
+      if (good && c.pattern != null) { try { new RegExp(c.pattern); } catch { good = false; } if (typeof c.pattern !== 'string') good = false; }
+      if (!good) err('choicesBad'); else checkAction(c.action, 'choices.action');
+    }
+    if (p.suggest != null) {
+      if (!Array.isArray(p.suggest)) err('suggestBad', { i: 0 });
+      else p.suggest.forEach((r, i) => {
+        let good = isObj(r) && typeof r.pattern === 'string' && ['set', 'add', 'push', 'remove', 'quest'].some((k) => isObj(r[k])) && (r.label == null || typeof r.label === 'string');
+        if (good) { try { new RegExp(r.pattern); } catch { good = false; } }
+        if (!good) err('suggestBad', { i }); else checkAction(r, `suggest[${i}]`);
+      });
+    }
+    if (p.guard != null) {
+      const g = p.guard;
+      if (!isObj(g) || !Array.isArray(g.items) || !g.items.length) err('guardBad');
+      else g.items.forEach((it, i) => {
+        if (!isObj(it) || typeof it.key !== 'string' || !it.key || (it.label != null && typeof it.label !== 'string') || (!it.location && typeof it.var !== 'string')) err('guardBad');
+        else if (it.location && !p.locations) err('guardBad');
+        else if (!it.location && !vars[it.var]) err('guardVar', { i, k: it.var });
+      });
+    }
+    if (p.correction != null && (!isObj(p.correction) || (p.correction.kind != null && !/^[A-ZÄÖÜ][A-ZÄÖÜ0-9_-]{1,20}$/.test(p.correction.kind)) ||
+        ['text', 'undo'].some((k) => p.correction[k] != null && typeof p.correction[k] !== 'string'))) err('correctionBad');
     return { ok: !errors.length, errors };
   }
 

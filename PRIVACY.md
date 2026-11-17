@@ -8,6 +8,7 @@
 - Settings, profiles, queue and game state are stored **locally** in your browser (`chrome.storage.local`). They never leave your device.
 - No analytics, no tracking, no advertising, no remote code, no third-party services.
 - The optional *Read replies aloud* feature uses the voices of your browser. Voices marked as online (for example some Google voices) would send the text to their provider, so the extension hides them unless you allow them.
+- Optional place ambience (v1.3) is off by default. If a profile gives a place an `audio` or `image` link and you switch ambience on, your browser loads that file from the host of the link, like any web page would.
 - Imported profiles are plain JSON data and are never executed as code.
 - You can delete all data at any time by removing the extension or its profiles.
 

@@ -275,3 +275,28 @@ body.fullpage.lay-bottom .chatpane { flex: 0 0 var(--chatH, 34vh); min-height: 1
 .composer button { padding: 8px 18px; }
 .composer .cstat { flex: 1 0 100%; min-height: 1em; font-size: 12px; color: var(--mut); }
 .composer .cstat.err { color: var(--err); }
+
+/* ---------- v1.3: Orte, Hinweise, Log, Quests ---------- */
+.world { border: 1px solid var(--line); background: var(--bg2); padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; }
+.locline { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.locline b { color: var(--fg); letter-spacing: .04em; }
+#ambImg { width: 100%; max-height: 140px; object-fit: cover; border: 1px solid var(--line); }
+.ambrow { align-items: center; }
+.ambrow input[type=range] { flex: 1; min-width: 60px; }
+.notice { border: 1px solid var(--line); background: var(--bg2); padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.notice.warn { border-color: var(--warn); }
+.notice ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.notice li { display: flex; gap: 6px; align-items: center; border-left: 2px solid var(--fg); background: var(--deep); padding: 3px 6px; }
+.notice li span { flex: 1; word-break: break-word; }
+.notice.warn li { border-left-color: var(--warn); }
+#turnNote { flex-direction: row; flex-wrap: wrap; align-items: center; }
+#turnNote span { flex: 1 1 200px; }
+details.sub { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 4px; }
+#logList, #questList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+#logList li, #questList li { display: flex; gap: 6px; align-items: center; border-left: 2px solid var(--fg); background: var(--deep); padding: 3px 6px; font-size: 11px; }
+#logList li span, #questList li > span { flex: 1; word-break: break-word; }
+#logList li.undone { border-left-color: var(--line); color: var(--mut); text-decoration: line-through; }
+#questList li.done { border-left-color: #5fe08a; }
+#questList li.failed { border-left-color: var(--err); }
+#questList li.active { border-left-color: var(--warn); }
+#questList select { flex: 0 0 auto; width: auto; }

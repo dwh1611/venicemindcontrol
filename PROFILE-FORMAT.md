@@ -57,6 +57,7 @@ A tab has `id`, `label` and `blocks`. Block types:
 - `{"type":"compose","kindLabel":"","whoLabel":"","textLabel":"","kinds":{"KIND":{"who":"placeholder","text":"placeholder","quick":["..."]}},"action":ACTION}`
   A form with kind, sender, content and quick texts.
 - `{"type":"scenarios"}` shows the mission list (only together with `scenarios`).
+- `{"type":"travel","cap":"GO TO","action":ACTION}` one button per neighbour of the current place (only together with `locations`, see [World](#world-v13)).
 
 ## ACTION
 ```json
@@ -78,6 +79,7 @@ A tab has `id`, `label` and `blocks`. Block types:
 - `requires` / `requiresAny`: mandatory inputs. If something is missing, `msg` is shown and nothing is queued.
 - `omitKinds`: kinds for which `{kind}` stays empty.
 - `shift`: advances the clock by `m` minutes (or until `until`). The placeholder `{until_minutes}` is only filled for `until`.
+- `quest`: `{ "questId": "done" }` sets quests (see [Quests](#quests-quests)).
 
 Placeholders: `{item}`, `{item.text}`, `{item.label}`, `{field.<id>}` (fields of the tab), `{kind}`, `{who}`, `{text}` (compose), `{until_minutes}`.
 
@@ -156,6 +158,62 @@ An action with `"table": "weather"` picks one entry (`weight` defaults to 1) and
 - Lists from the status line: `state.lists`: `{ "key": "seen", "regex": "Seen:\\s*([^·\\n]+)", "sep": "," }`. Group 1 is split at `sep` (default `,`).
 - `when` accepts `{ "key": "items", "has": "key" }` for lists (and text that contains a word).
 
+## World (v1.3)
+Optional parts for places, choices, drift checks, suggestions and quests. All are optional and combine with everything above.
+
+### Places (`locations`) and the `travel` block
+```json
+"locations": {
+  "key": "loc", "start": "hall", "minutes": 3,
+  "items": [
+    { "id": "hall", "label": "Hall", "match": "hall|foyer", "hint": "Cold marble.",
+      "neighbours": ["library", { "id": "cellar", "minutes": 8 }],
+      "theme": { "fg": "#7fb4ff", "glow": "108,170,255" },
+      "audio": "https://example.org/rain.mp3", "image": "https://example.org/hall.jpg" },
+    { "id": "library", "label": "Library", "neighbours": ["hall"] },
+    { "id": "cellar", "label": "Cellar", "neighbours": ["hall"] }
+  ]
+}
+```
+- `items`: the places. `id` (a–z, 0–9, `_`, `-`) and `label` are required. `neighbours` lists the ids you can walk to, either as text or as `{ "id", "minutes" }` for a travel time of its own. The validator reports neighbours and `start` that are not a place.
+- `key` (default `loc`): the status line value that holds the current place. It is matched against the place `match` (regular expression), `id` or `label`. `start` is the place before any status line was read. `minutes` is the default travel time.
+- The panel remembers the current place. A **new** value in the status line moves it; an unchanged value does not undo a move you made in the panel. Condition keys: `location` (the id).
+- Block `{ "type": "travel", "cap": "GO TO", "empty": "…", "action": ACTION }` shows one button per neighbour of the current place. In the action `{item}` is the destination, `{item.id}` its id, `{from}` the current place and `m` the travel time, so `"shift": true` moves the clock and fires scheduled events.
+- `theme`: colours that replace the profile theme while you are in that place (any of the theme keys, `glow` as `"r,g,b"`). They apply to the panel and to the chat page and change without a reload.
+- `hint`: a line under the place name. `audio` and `image` (https links, nothing is bundled): an optional ambient loop and picture. They are **off by default**; the panel shows an *ambience* switch, a mute button and a volume slider. Turning it on makes the browser contact the host of those links (see [Privacy](PRIVACY.md)).
+
+### Choices from the reply (`choices`)
+```json
+"choices": { "cap": "WHAT NOW", "max": 8, "pattern": "^>>\\s*(.+)$",
+  "action": { "who": "actor", "parts": ["CHOICE", "{item}"] } }
+```
+When the last reply ends in numbered (`1.`, `1)`), lettered (`A)`) or bulleted options, they appear as buttons. A click queues the action with `{item}` (the text), `{n}` (the number or letter). Detection looks at the end of the reply (at most two lines may follow the list), ignores the `⏱` line and needs at least two options, in order. With `pattern` every line that matches is an option (group 1 = text, optional group 2 = key). The bar stays empty if nothing is found.
+
+### State guard (`guard`) and `correction`
+```json
+"guard": { "items": [ { "key": "hp", "var": "hp" }, { "key": "pack", "var": "pack" }, { "key": "loc", "location": true } ] },
+"correction": { "kind": "CORRECTION", "text": "Your status line does not match the real state.", "undo": "Ignore my last message." }
+```
+When a new status line disagrees with the panel (a number against a variable, a list against a list variable, a place against the current place) a warning lists the differences. **SEND CORRECTION** queues a line (`kind`, `text`, the panel values) and never sends by itself. `correction` also sets the line for *UNDO SEND* (`undo`). Texts are in the language of the Mind; the defaults are English.
+
+### Suggested changes (`suggest`)
+```json
+"suggest": [
+  { "pattern": "you lose (\\d+) HP", "add": { "hp": "-{g1}" }, "label": "Damage" },
+  { "pattern": "you find (?:a |an )?([^.\\n]+)", "push": { "pack": "{g1}" } }
+]
+```
+The last reply is searched for each `pattern` (case-insensitive, all hits). Every hit becomes a suggestion with the same effects as an action (`set`, `add`, `push`, `remove`, `quest`); `{g1}`, `{g2}` … are the groups. **APPLY** changes the state, **×** dismisses. Nothing is applied silently.
+
+### Quests (`quests`)
+```json
+"quests": [ { "id": "key", "label": "Find the key", "text": "in the library", "state": "open" } ]
+```
+States: `open`, `active`, `done`, `failed`. The panel shows the list with a selector. An action sets a quest with `"quest": { "key": "done" }`. In conditions use `quest.<id>` (the state), `questsDone` and `questsActive` (counts); scheduled `events` may carry a `when`, so they only appear once a quest is done. In texts `{quest.<id>}` is the state.
+
+### Change log, undo, reroll, branches
+Not profile fields but part of the panel: every change an action makes is written to the **change log** (*GAME STATE*) and can be undone one by one; removing a queued line or *CLEAR* reverts its changes. **REROLL** repeats the last action with a new roll or table pick and replaces its effects and its queued line. **UNDO SEND** restores queue, clock, history and state to just before the last send; text that was already sent stays in the Venice chat. **BRANCH** on a save loads it and continues under a new name, the original stays untouched.
+
 ## Conditions (`when`)
 Tabs, blocks and grid items (objects) may have a `when` condition. It is checked against the last status line (the HUD values), so
 buttons only appear when they make sense:
@@ -165,7 +223,7 @@ buttons only appear when they make sense:
 { "type": "grid", "when": { "all": [ { "key": "loc", "match": "bar" }, { "not": { "key": "alarm", "gt": 2 } } ] }, ... }
 ```
 
-- `key` is a state key (a `parts`, `numbers`, `meters` or `lists` key from `state`, plus `time`; meters also have `<key>Max`) or a variable from `variables`. Variables always count, and take precedence over a status line key with the same name.
+- `key` is a state key (a `parts`, `numbers`, `meters` or `lists` key from `state`, plus `time`; meters also have `<key>Max`) or a variable from `variables`, plus `location` (the current place id) and `quest.<id>`, `questsDone`, `questsActive` (see [World](#world-v13)). Variables always count, and take precedence over a status line key with the same name.
 - Exactly one operator per condition: `eq`, `ne`, `lt`, `lte`, `gt`, `gte` (numbers or text), `match` (regular expression), `has` (list contains a value, or text contains a word), `exists` (`true`/`false`).
 - Combine with `all` (and), `any` (or) and `not`.
 - Until the first status line has been read, everything is shown. A missing value makes the condition false (except `exists: false`).

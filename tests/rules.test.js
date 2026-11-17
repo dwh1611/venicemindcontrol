@@ -128,16 +128,16 @@ run(async () => {
   ok('midnight rollover keeps order', (await queue()).length === 0, await queue());
   await click('[data-add="30"]'); // 00:20 -> 00:50 fires "rain" (in 60 from 23:50)
   ok('relative event after midnight', (await queue()).length === 1 && (await queue())[0].includes('00:50 · WEATHER'), await queue());
-  await clear();
+  await clear(); // CLEAR nimmt die Wirkungen eingereihter Zeilen zurück (v1.3, #29): money wieder 100
 
   // --- Spielstand enthält Zustand
   await ev(`(()=>{const i=document.getElementById('slotName');i.value='S1';document.getElementById('slotSave').click()})();0`);
   await ev(`(()=>{const i=[...document.querySelectorAll('#varsList input')][1];i.value='5';i.dispatchEvent(new Event('change'))})();0`);
   ok('money changed', (await vars()).money === 5);
   await ev(`[...document.querySelectorAll('#slotList li button')].find(b=>b.textContent==='LOAD').click();0`);
-  ok('load slot restores variables', (await vars()).money === 70, await vars());
+  ok('load slot restores variables', (await vars()).money === 100, await vars());
   const exp = await ev(`JSON.stringify(sessionData())`).then(JSON.parse);
-  ok('export has variables and rolls', exp.variables && exp.variables.money === 70 && Array.isArray(exp.rolls) && exp.rolls.length >= 3, exp.variables);
+  ok('export has variables and rolls', exp.variables && exp.variables.money === 100 && Array.isArray(exp.rolls) && exp.rolls.length >= 3, exp.variables);
 
   // --- Zurücksetzen
   await click('#varsReset');
