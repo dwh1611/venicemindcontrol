@@ -1834,18 +1834,26 @@ function openEditor(raw, opts = {}) {
   editing = true;
   previewing = false;
   edOrigId = opts.id || null;
+  assistCtx = opts.assist || null;
   $('edTitle').textContent = t(opts.id ? 'editor.titleEdit' : 'editor.titleNew', { id: opts.id || '' });
-  $('edText').value = JSON.stringify(raw, null, 2);
+  $('edText').value = opts.text != null ? opts.text : JSON.stringify(raw, null, 2);
   $('app').hidden = true;
+  $('assist').hidden = true;
   $('editor').hidden = false;
-  checkDraft();
+  setNote(opts.assist ? opts.assist.note : '');
+  if (opts.assist && opts.assist.idAdded) noteAdd(t('assist.idAdded', { id: opts.assist.mindId }));
+  if ($('edText').value.trim()) checkDraft();
+  else { edStatus(''); $('edErrors').innerHTML = ''; }
   if (opts.copy) edStatus(t('editor.copyNote'), true);
   $('editor').scrollIntoView();
+  if (opts.assist) $('edText').focus();
 }
 
 function closeEditor() {
   editing = false;
   previewing = false;
+  assistCtx = null;
+  setNote('');
   $('editor').hidden = true;
   lastUnknown = '';
   profile = null; // wieder das echte Profil des Tabs aufbauen
@@ -1853,6 +1861,7 @@ function closeEditor() {
 }
 
 async function previewDraft() {
+  applyAssistId();
   const obj = checkDraft();
   if (!obj) return;
   previewing = true;
@@ -1861,6 +1870,7 @@ async function previewDraft() {
 }
 
 async function saveDraft() {
+  applyAssistId();
   const obj = checkDraft();
   if (!obj) return;
   const { customProfiles } = await chrome.storage.local.get('customProfiles');
@@ -1879,6 +1889,185 @@ function initEditor() {
   $('edPreview').onclick = previewDraft;
   $('edSave').onclick = saveDraft;
   $('edClose').onclick = closeEditor;
+  // Eingefügtes JSON aus dem Chat: umgebenden Text entfernen und fehlende Mind-ID ergänzen (nur im Assistenten).
+  $('edText').addEventListener('paste', () => setTimeout(() => { applyAssistId(); checkDraft(); }, 0));
+}
+
+/* ---------- Profil-Assistent ----------
+   Schreibt den Auftrag samt Beschreibung in den Venice-Chat, wartet auf die fertige Antwort des Minds und
+   öffnet den Editor mit dem JSON. Fehlt darin die Mind-ID, wird sie aus der Adresse des Tabs ergänzt. */
+let assistCtx = null;  // { mindId, note, idAdded } solange der Editor vom Assistenten kommt
+let asRun = null;      // laufender Auftrag: { tabId, mindId, state, started, timer, busy, noJson }
+const AS_SETTLE_MS = 6000;   // so lange darf sich die Antwort nicht mehr ändern
+const AS_TICK_MS = 1500;
+const AS_MAX_MS = 600000;
+const AS_FIELDS = { name: 'asName', mindLang: 'asMindLang', panelLang: 'asPanelLang', about: 'asAbout', actions: 'asActions', events: 'asEvents', status: 'asValues', look: 'asLook', scenarios: 'asScen' };
+
+// <b>…</b> im Text als Fettdruck, ohne innerHTML zu benutzen.
+function setNote(key) {
+  const box = $('edAssist');
+  box.innerHTML = '';
+  box.hidden = !key;
+  if (!key) return;
+  t(key).split(/(<b>.*?<\/b>)/).filter(Boolean).forEach((part) => {
+    const m = /^<b>(.*)<\/b>$/.exec(part);
+    box.appendChild(m ? h('b', null, m[1]) : document.createTextNode(part));
+  });
+}
+function noteAdd(msg) { const box = $('edAssist'); box.hidden = false; box.appendChild(h('div', null, msg)); }
+
+function asState(msg, ok = true) {
+  const e = $('asState');
+  e.textContent = msg;
+  e.className = 'status ' + (ok ? 'ok' : 'err');
+}
+
+function assistForm() {
+  const f = {};
+  Object.entries(AS_FIELDS).forEach(([k, id]) => { f[k] = $(id).value.trim(); });
+  return f;
+}
+
+async function assistTarget() {
+  const tab = await findVeniceTab();
+  const box = $('asMind');
+  if (!tab) { box.textContent = t('assist.noTab'); box.className = 'status err'; return null; }
+  const id = MindProfiles.mindIdFromUrl(tab.url);
+  box.textContent = t(id ? 'assist.mind' : 'assist.mindNoId', { title: (tab.title || '').slice(0, 60), id });
+  box.className = 'status ' + (id ? 'ok' : 'err');
+  return { tab, mindId: id };
+}
+
+async function assistOpen() {
+  editing = true;
+  $('app').hidden = true;
+  $('assist').hidden = false;
+  const { assistForm: saved } = await chrome.storage.local.get('assistForm');
+  const dflt = I18n.lang === 'de' ? 'Deutsch' : 'English';
+  Object.entries(AS_FIELDS).forEach(([k, id]) => { $(id).value = (saved && saved[k]) || (k === 'mindLang' || k === 'panelLang' ? dflt : ''); });
+  $('asNow').hidden = true;
+  $('asStart').disabled = false;
+  asState('');
+  await assistTarget();
+  $('assist').scrollIntoView();
+}
+
+function assistStop() {
+  if (asRun) clearInterval(asRun.timer);
+  asRun = null;
+  $('asNow').hidden = true;
+  $('asStart').disabled = false;
+}
+
+function assistClose() {
+  assistStop();
+  editing = false;
+  $('assist').hidden = true;
+  lastUnknown = '';
+  profile = null;
+  refreshMind();
+}
+
+async function assistStart() {
+  const target = await assistTarget();
+  if (!target) return;
+  const f = assistForm();
+  await chrome.storage.local.set({ assistForm: f });
+  let tpl;
+  try {
+    const md = await (await fetch(chrome.runtime.getURL(I18n.lang === 'de' ? 'PROMPT-Profile-Generator.de.md' : 'PROMPT-Profile-Generator.md'))).text();
+    tpl = md.split('<!-- PROMPT START -->')[1].split('<!-- PROMPT END -->')[0].trim();
+  } catch (e) { return asState(t('assist.sendFail', { msg: e.message }), false); }
+  const before = await readReply(target.tab);
+  const base = before && before.ok ? { count: before.count, text: before.text } : { count: 0, text: '' };
+  asState(t('assist.sending'));
+  $('asStart').disabled = true;
+  const ok = await inject(MindAssistant.buildPrompt(tpl, f, target.mindId), { send: true, append: false }, target.tab.id);
+  if (!ok) { $('asStart').disabled = false; return asState(t('assist.sendFail', { msg: $('status').textContent.replace(/^✗\s*/, '') }), false); }
+  assistStop();
+  $('asStart').disabled = true;
+  asRun = { tabId: target.tab.id, mindId: target.mindId, state: { base, text: '', since: 0 }, started: Date.now(), timer: null, busy: false, noJson: false };
+  asRun.timer = setInterval(assistTick, AS_TICK_MS);
+  $('asNow').hidden = false;
+  asState(t('assist.waiting', { s: 0 }));
+}
+
+async function assistTick() {
+  const r = asRun;
+  if (!r || r.busy) return;
+  r.busy = true;
+  try {
+    let tab = null;
+    try { tab = await chrome.tabs.get(r.tabId); } catch { /* Tab geschlossen */ }
+    if (!tab) { assistStop(); return asState(t('assist.noTab'), false); }
+    const reply = await readReply(tab);
+    if (!asRun || asRun !== r) return;
+    if (MindAssistant.settled(r.state, reply, Date.now(), AS_SETTLE_MS)) {
+      const found = MindAssistant.extractJson(reply.text);
+      if (found) return assistFinish(found);
+      r.noJson = true;
+      r.state.base = { count: reply.count, text: reply.text }; // auf die nächste Antwort warten
+      r.state.text = '';
+    }
+    if (Date.now() - r.started > AS_MAX_MS) { assistStop(); return asState(t('assist.timeout'), false); }
+    asState(r.noJson ? t('assist.noJson') : t('assist.waiting', { s: Math.round((Date.now() - r.started) / 1000) }));
+  } finally { r.busy = false; }
+}
+
+// Öffnet den Editor mit dem Fund (oder leer, wenn es nichts gibt).
+function assistFinish(found) {
+  const mindId = asRun ? asRun.mindId : null;
+  assistStop();
+  let text = '';
+  let note = 'assist.note.empty';
+  let idAdded = false;
+  if (found && found.obj) {
+    const w = MindAssistant.withMindId(found.obj, mindId);
+    text = JSON.stringify(w.obj, null, 2);
+    idAdded = w.added;
+    note = 'assist.note.ok';
+  } else if (found) {
+    text = found.text;
+    note = 'assist.note.broken';
+  }
+  openEditor(null, { text, assist: { mindId, note, idAdded } });
+}
+
+async function assistNow() {
+  const r = asRun;
+  let found = null;
+  if (r) {
+    const tab = await chrome.tabs.get(r.tabId).catch(() => null);
+    const reply = tab ? await readReply(tab) : null;
+    const fresh = reply && reply.ok && (reply.count !== r.state.base.count || reply.text !== r.state.base.text);
+    if (fresh) found = MindAssistant.extractJson(reply.text);
+  }
+  assistFinish(found);
+}
+
+// Im Editor des Assistenten: Text rund um das JSON entfernen, Mind-ID ergänzen.
+function applyAssistId() {
+  if (!assistCtx) return;
+  const ta = $('edText');
+  let obj;
+  try { obj = JSON.parse(ta.value); } catch {
+    const ex = MindAssistant.extractJson(ta.value);
+    if (!ex || !ex.obj) return;
+    obj = ex.obj;
+    ta.value = JSON.stringify(obj, null, 2);
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+  const w = MindAssistant.withMindId(obj, assistCtx.mindId);
+  if (w.obj === obj) return;
+  ta.value = JSON.stringify(w.obj, null, 2);
+  if (w.added) noteAdd(t('assist.idAdded', { id: assistCtx.mindId }));
+}
+
+function initAssist() {
+  $('passist').onclick = assistOpen;
+  $('asStart').onclick = assistStart;
+  $('asNow').onclick = assistNow;
+  $('asClose').onclick = assistClose;
 }
 
 function setLanguage(l) {
@@ -1914,6 +2103,7 @@ function initLang() {
   initFullpage();
   initProfileManager();
   initEditor();
+  initAssist();
   await refreshMind();
   if (TAB_MODE) { renderChat(); setInterval(renderChat, 1500); }
   setInterval(refreshMind, 3000); // Fängt Seitenwechsel in der Single-Page-App ab
