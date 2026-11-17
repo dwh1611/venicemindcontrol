@@ -29,6 +29,24 @@ let rollLog = [];        // letzte Würfe [{ at, text }]
 let evDone = [];         // IDs ausgelöster Ereignisse
 let evStart = '';        // Uhr beim Start der Ereignisse (Bezug für "in")
 let dynGrids = [];       // Funktionen, die Buttons aus Listen neu aufbauen
+let varLog = [];         // Änderungslog (#29): [{ id, at, time, label, line, ops, state: queued|sent|undone }]
+let turns = [];          // Stand vor jedem Senden, für "Senden zurück" (#17)
+let quests = {};         // Quest-Zustände (#33): { id: open|active|done|failed }
+let curLoc = '';         // aktueller Ort (id) (#14)
+let lastStatusLoc = '';  // zuletzt gelesener Orts-Text der Statuszeile
+let lastAct = null;      // letzte Aktion für "Neu würfeln" (#32)
+let lastFx = null;       // Logeintrag der zuletzt ausgeführten Aktion
+let guardMismatch = [];  // Abweichungen zwischen Statuszeile und Panel (#30)
+let guardHidden = '';    // Abweichung, die der Nutzer ignoriert hat
+let suggested = [];      // Änderungsvorschläge aus der letzten Antwort (#31)
+let replySeen = '';      // Abdruck der zuletzt gelesenen Antwort (Optionen, Vorschläge)
+let replyDone = '';
+let amb = { on: false, mute: false, vol: 50 }; // Ambiente (#16), standardmäßig aus
+let ambAudio = null;
+let ambUrl = '';
+let locThemeSig = '';
+const TURNS_MAX = 10;
+const LOG_MAX = 60;
 let rng = Math.random;
 const HISTORY_MAX = 100;
 
@@ -61,6 +79,12 @@ async function loadProfileData() {
   $('seed').value = d.seed || '';
   setSeed($('seed').value);
   vars = initVars(d.vars);
+  varLog = d.varLog || [];
+  turns = d.turns || [];
+  quests = MindWorld.questInit(profile.quests, d.quests);
+  curLoc = d.curLoc || '';
+  lastStatusLoc = d.lastStatusLoc || '';
+  lastAct = null; guardHidden = ''; guardMismatch = []; suggested = []; replySeen = ''; replyDone = '';
   rollLog = d.rollLog || [];
   evDone = d.evDone || [];
   evStart = d.evStart || clock();
@@ -75,6 +99,13 @@ async function loadProfileData() {
   const t = { ...THEME_DEFAULT, ...(s[key('theme')] || {}) };
   Object.entries(THEME_IDS).forEach(([k, id]) => { $(id).checked = !!t[k]; });
   renderHud(s[key('gameState')]);
+  renderChoices([]);
+  renderSuggest();
+  renderGuard();
+  renderLog();
+  renderQuests();
+  renderReroll();
+  $('turnNote').hidden = true;
   renderFavs();
   renderSlots();
   renderVars();
@@ -84,7 +115,7 @@ async function loadProfileData() {
 
 function save() {
   if (!profile || previewing) return;
-  const d = { history, queue, customScenarios, vars, rollLog, evDone, evStart };
+  const d = { history, queue, customScenarios, vars, rollLog, evDone, evStart, varLog, turns, quests, curLoc, lastStatusLoc };
   DATA_IDS.forEach((id) => { d[id] = $(id).value; });
   DATA_CHECKS.forEach((id) => { d[id] = $(id).checked; });
   chrome.storage.local.set({ [key('data')]: d });
@@ -138,7 +169,7 @@ function renderQueue() {
     const li = h('li');
     const x = h('button', null, '×');
     x.title = t('queue.remove');
-    x.onclick = () => { queue.splice(i, 1); renderQueue(); save(); };
+    x.onclick = () => dropLine(i);
     li.append(h('span', null, q), x);
     ul.appendChild(li);
   });
@@ -230,16 +261,19 @@ function renderSlots() {
     li.appendChild(h('span', null, `${s.name} · ${d.toLocaleDateString()} ${hhmm(s.at)} · ${s.time || '–'} · ${t('slots.counts', { q: s.queue.length, h: s.history.length })}`));
     const load = h('button', null, t('slots.load'));
     load.onclick = () => loadSlot(s);
+    const br = h('button', null, t('slots.branch'));
+    br.title = t('slots.branchTitle');
+    br.onclick = () => branchSlot(s);
     const del = h('button', null, '×');
     del.title = t('slots.delete');
     del.onclick = () => { slots = slots.filter((x) => x !== s); renderSlots(); saveExtra(); };
-    li.append(load, del);
+    li.append(load, br, del);
     ul.appendChild(li);
   });
   if (!slots.length) ul.appendChild(h('li', 'empty', t('slots.none')));
 }
 
-const snapshot = (name) => ({ name, at: Date.now(), time: clock(), queue: [...queue], history: history.map((e) => ({ ...e })), userText: $('userText').value, vars: clone(vars), evDone: [...evDone], evStart });
+const snapshot = (name) => ({ name, at: Date.now(), time: clock(), queue: [...queue], history: history.map((e) => ({ ...e })), userText: $('userText').value, vars: clone(vars), evDone: [...evDone], evStart, quests: clone(quests), curLoc, varLog: clone(varLog) });
 
 function saveSlot() {
   const name = $('slotName').value.trim();
@@ -250,6 +284,18 @@ function saveSlot() {
   renderSlots();
   saveExtra();
   status(t('slots.saved', { name }));
+}
+
+// Zweig (#17): Spielstand laden und sofort unter neuem Namen sichern; der Quell-Spielstand bleibt unberührt.
+function branchSlot(s) {
+  loadSlot(s);
+  let name = `${s.name} ↳`;
+  for (let i = 2; slots.some((x) => x.name === name); i++) name = `${s.name} ↳${i}`;
+  slots.push(snapshot(name));
+  $('slotName').value = name;
+  renderSlots();
+  saveExtra();
+  status(t('slots.branched', { name, from: s.name }));
 }
 
 function loadSlot(s) {
@@ -264,6 +310,11 @@ function loadSlot(s) {
   if (s.vars) vars = initVars(s.vars);
   evDone = s.evDone ? [...s.evDone] : evDone;
   evStart = s.evStart || evStart;
+  if (s.quests) quests = MindWorld.questInit(profile.quests, s.quests);
+  if (s.curLoc != null) curLoc = s.curLoc;
+  if (s.varLog) varLog = clone(s.varLog);
+  lastAct = null;
+  renderLog(); renderQuests(); renderLocation(); renderReroll();
   renderVars();
   renderHud(lastState);
   renderEvents();
@@ -849,14 +900,22 @@ async function send() {
   if (!text) { status(t('status.nothing'), false); return; }
   const ok = await inject(text, { send: $('autosend').checked || $('instant').checked, append: $('append').checked });
   if (!ok) return;
-  history.unshift({ text, at: Date.now() });
+  const sentAt = Date.now();
+  turns.unshift({ sentAt, time: clock(), queue: [...queue], userText: $('userText').value, vars: clone(vars), evDone: [...evDone], evStart, quests: clone(quests), curLoc, varLog: clone(varLog) });
+  turns = turns.slice(0, TURNS_MAX);
+  const sentLines = new Set(queue);
+  varLog.forEach((e) => { if (e.state === 'queued' && sentLines.has(e.line)) { e.state = 'sent'; e.turn = sentAt; } });
+  history.unshift({ text, at: sentAt });
   trimHistory();
   queue = [];
+  suggested = []; renderSuggest(); renderChoices([]); $('turnNote').hidden = true;
   $('userText').value = '';
   const adv = profile.clock === false ? 0 : parseInt($('advance').value, 10) || 0;
   if (adv) shiftTime(adv);
   renderQueue();
   renderHistory();
+  renderLog();
+  renderReroll();
   save();
 }
 
@@ -894,7 +953,8 @@ function runAction(a, scope) {
   const text = a.format === 'raw'
     ? [P.parts(a.parts, scope).join(' '), body].filter(Boolean).join(' ')
     : line(a.who === 'world' ? wp() : hp(), P.parts(a.parts, scope), body);
-  if (!applyEffects(a, scope)) return null;
+  if (!applyEffects(a, scope, P.parts(a.parts, scope).join(' ') || text)) return null;
+  if (lastFx) lastFx.line = text;
   logs.forEach((l) => rollLog.unshift({ at: Date.now(), text: l }));
   if (logs.length) { rollLog = rollLog.slice(0, 20); renderRolls(); }
   return a.shift && minutes ? { text, shift: minutes } : text;
@@ -961,7 +1021,9 @@ function initVars(saved) {
   return out;
 }
 
-const varLabel = (k) => (profile.variables[k].label || k);
+const varLabel = (k) => ((profile.variables && profile.variables[k] && profile.variables[k].label) || k);
+const questOf = (id) => (profile.quests || []).find((q) => q.id === id);
+const questLabel = (id) => (questOf(id) ? questOf(id).label : id);
 const varShow = (k) => {
   const sp = profile.variables[k];
   const v = vars[k];
@@ -976,42 +1038,136 @@ function stateLine() {
   if (profile.stateLine) {
     const scope = {};
     keys.forEach((k) => { scope[k] = Array.isArray(vars[k]) ? vars[k].join(', ') : vars[k]; scope[k + 'Max'] = profile.variables[k].max; });
+    scope.quest = quests;
     return MindProfiles.fill(profile.stateLine, scope).text;
   }
   return line(wp(), ['STATE'], keys.map((k) => (profile.variables[k].type === 'list' ? `${varLabel(k)}: ${varShow(k)}` : `${varLabel(k)} ${varShow(k)}`)).join(' · '));
 }
 
-// Wendet set/add/push/remove an. Prüft die Grenzen, bevor etwas geändert wird.
-function applyEffects(a, scope) {
-  if (!profile.variables || !(a.set || a.add || a.push || a.remove)) return true;
-  const spec = profile.variables;
+// Wendet set/add/push/remove/quest an. Prüft die Grenzen, bevor etwas geändert wird, und schreibt die
+// Änderung ins Log (lastFx), damit sie einzeln zurückgenommen werden kann (#29).
+function applyEffects(a, scope, label) {
+  lastFx = null;
+  const hasVar = profile.variables && (a.set || a.add || a.push || a.remove);
+  const hasQuest = profile.quests && a.quest;
+  if (!hasVar && !hasQuest) return true;
+  const spec = profile.variables || {};
   const next = clone(vars);
   const val = (v) => (typeof v === 'number' ? String(v) : MindProfiles.fill(String(v), scope).text.trim());
   const num = (v) => { const n = parseFloat(val(v).replace(',', '.')); return Number.isNaN(n) ? null : n; };
   const touched = new Set();
-  for (const [k, v] of Object.entries(a.set || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] = n; touched.add(k); }
-  for (const [k, v] of Object.entries(a.add || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] += n; touched.add(k); }
-  for (const [k, v] of Object.entries(a.push || {})) { const s = val(v); if (s) next[k].push(s); touched.add(k); }
-  for (const [k, v] of Object.entries(a.remove || {})) {
-    const s = val(v).toLowerCase();
-    const i = next[k].findIndex((x) => x.toLowerCase() === s);
-    if (i < 0) return status(t('var.notIn', { item: val(v), label: varLabel(k) }), false);
-    next[k].splice(i, 1); touched.add(k);
+  if (hasVar) {
+    for (const [k, v] of Object.entries(a.set || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] = n; touched.add(k); }
+    for (const [k, v] of Object.entries(a.add || {})) { const n = num(v); if (n == null) return status(t('var.nan', { label: varLabel(k) }), false); next[k] += n; touched.add(k); }
+    for (const [k, v] of Object.entries(a.push || {})) { const s2 = val(v); if (s2) next[k].push(s2); touched.add(k); }
+    for (const [k, v] of Object.entries(a.remove || {})) {
+      const s2 = val(v).toLowerCase();
+      const i = next[k].findIndex((x) => x.toLowerCase() === s2);
+      if (i < 0) return status(t('var.notIn', { item: val(v), label: varLabel(k) }), false);
+      next[k].splice(i, 1); touched.add(k);
+    }
+    for (const k of touched) {
+      const sp = spec[k];
+      if (sp.type === 'list') continue;
+      if (sp.min != null && next[k] < sp.min) return status(t('var.below', { label: varLabel(k), min: sp.min }), false);
+      if (sp.max != null && next[k] > sp.max) return status(t('var.above', { label: varLabel(k), max: sp.max }), false);
+    }
   }
-  for (const k of touched) {
-    const sp = spec[k];
-    if (sp.type === 'list') continue;
-    if (sp.min != null && next[k] < sp.min) return status(t('var.below', { label: varLabel(k), min: sp.min }), false);
-    if (sp.max != null && next[k] > sp.max) return status(t('var.above', { label: varLabel(k), max: sp.max }), false);
+  const qops = [];
+  if (hasQuest) {
+    for (const [id, v] of Object.entries(a.quest)) {
+      const to = val(v);
+      if (!MindWorld.QUEST_STATES.includes(to)) return status(t('quest.badState', { id, state: to }), false);
+      if (quests[id] !== to) qops.push({ kind: 'quest', id, from: quests[id], to });
+    }
   }
+  const ops = [...MindWorld.diffVars(vars, next, spec), ...qops];
   vars = next;
+  qops.forEach((o) => { quests[o.id] = o.to; });
+  if (ops.length) lastFx = addLog(ops, label);
   commitVars();
   return true;
+}
+
+/* ---------- Änderungslog mit Undo (#29) ---------- */
+const opLabel = (k, isQuest) => (isQuest ? questLabel(k) : varLabel(k));
+
+function addLog(ops, label) {
+  const e = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), time: clock(), label: String(label || ''), line: '', ops, state: 'queued' };
+  varLog.unshift(e);
+  varLog = varLog.slice(0, LOG_MAX);
+  renderLog();
+  return e;
+}
+
+// dir -1 nimmt einen Eintrag zurück, +1 stellt ihn wieder her.
+function flipEntry(e, dir) {
+  const r = MindWorld.applyOps(vars, e.ops, dir, profile.variables || {});
+  if (!r.ok) { status(t(r.error.code === 'gone' ? 'log.gone' : 'log.limit', { label: varLabel(r.error.key) }), false); return false; }
+  vars = r.vars;
+  e.ops.filter((o) => o.kind === 'quest').forEach((o) => { quests[o.id] = dir < 0 ? o.from : o.to; });
+  commitVars();
+  return true;
+}
+
+function undoEntry(e) {
+  if (!e || e.state === 'undone') return false;
+  if (!flipEntry(e, -1)) return false;
+  e.prev = e.state;
+  e.state = 'undone';
+  const i = queue.indexOf(e.line);
+  if (e.line && i >= 0) { queue.splice(i, 1); renderQueue(); save(); }
+  renderLog();
+  return true;
+}
+
+function redoEntry(e) {
+  if (!flipEntry(e, 1)) return false;
+  e.state = e.prev || 'queued';
+  renderLog();
+  return true;
+}
+
+// Eine eingereihte Zeile fällt weg: ihre Änderungen werden zurückgenommen.
+function revertQueued(lines) {
+  let n = 0;
+  [...lines].reverse().forEach((text) => {
+    const e = varLog.find((x) => x.state === 'queued' && x.line === text);
+    if (e && undoEntry(e)) n++;
+  });
+  return n;
+}
+
+function dropLine(i) {
+  const [text] = queue.splice(i, 1);
+  const e = varLog.find((x) => x.state === 'queued' && x.line === text);
+  if (e && undoEntry(e)) status(t('log.removedReverted'));
+  renderQueue();
+  save();
+}
+
+function renderLog() {
+  const ul = $('logList');
+  if (!ul) return;
+  ul.innerHTML = '';
+  varLog.slice(0, 30).forEach((e) => {
+    const li = h('li', e.state === 'undone' ? 'undone' : null);
+    li.append(h('span', null, [e.time, e.label, MindWorld.describeOps(e.ops, opLabel)].filter(Boolean).join(' · ')));
+    if (e.state !== 'undone') {
+      const b = h('button', null, t('log.undo'));
+      b.onclick = () => { if (undoEntry(e)) status(t('log.reverted', { text: MindWorld.describeOps(e.ops, opLabel) })); };
+      li.appendChild(b);
+    }
+    ul.appendChild(li);
+  });
+  if (!varLog.length) ul.appendChild(h('li', 'empty', t('log.empty')));
 }
 
 // Nach jeder Änderung: HUD, Bedingungen, dynamische Buttons, Vorschau, Speicher.
 function commitVars() {
   renderVars();
+  renderQuests();
+  renderEvents();
   renderHud(lastState);
   renderPreview();
   save();
@@ -1021,7 +1177,7 @@ function renderVars() {
   const box = $('varsList');
   box.innerHTML = '';
   const keys = Object.keys((profile && profile.variables) || {});
-  $('varsBox').hidden = !keys.length;
+  $('varsBox').hidden = !keys.length && !(profile && profile.quests && profile.quests.length);
   keys.forEach((k) => {
     const sp = profile.variables[k];
     const label = h('label');
@@ -1049,7 +1205,7 @@ function renderVars() {
 /* ---------- Geplante Ereignisse ---------- */
 const toMin = (hhmmStr) => { const m = /^(\d{1,2}):(\d{2})$/.exec(hhmmStr || ''); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null; };
 const evAbs = (e) => (e.at ? toMin(e.at) : ((toMin(evStart) || 0) + e.in) % 1440);
-const evPending = () => (profile.events || []).filter((e) => e.daily || !evDone.includes(e.id));
+const evPending = () => (profile.events || []).filter((e) => (e.daily || !evDone.includes(e.id)) && MindProfiles.test(e.when, whenState()));
 const evLine = (e) => `[${[wp(), profile.clock === false ? '' : hhmmOf(evAbs(e)), e.kind, e.who].filter(Boolean).join(' · ')}] ${e.text}`;
 
 function queueEvents(list) {
@@ -1106,8 +1262,13 @@ function setTab(id) {
 // Zustand für "when": Statuszeile plus die Variablen des Panels (Variablen gelten immer).
 function whenState() {
   const hasVars = profile && profile.variables;
-  if (lastState == null && !hasVars) return null;
-  return { ...(lastState || {}), ...(hasVars ? vars : {}) };
+  const hasWorld = profile && (profile.quests || profile.locations);
+  if (lastState == null && !hasVars && !hasWorld) return null;
+  return {
+    ...(lastState || {}), ...(hasVars ? vars : {}),
+    ...(profile && profile.quests ? MindWorld.questWhen(profile.quests, quests) : {}),
+    ...(profile && profile.locations ? { location: curLoc } : {}),
+  };
 }
 
 function refreshDynamic() {
@@ -1146,7 +1307,7 @@ function shortcut(e) {
     const vis = [...document.querySelectorAll('.tab')].filter((b) => !b.hidden);
     const i = vis.findIndex((b) => b.classList.contains('active'));
     if (vis.length) setTab(vis[(i + (e.code === 'ArrowRight' ? 1 : vis.length - 1)) % vis.length].dataset.tab);
-  } else if (e.code === 'KeyZ') { queue.pop(); renderQueue(); save(); }
+  } else if (e.code === 'KeyZ') { if (queue.length) dropLine(queue.length - 1); }
   else if (e.code === 'KeyX') $('clearQueue').click();
   else if (e.code === 'KeyF') $('hsearch').focus();
   else if (e.code === 'KeyT') { $('time').focus(); $('time').select(); }
@@ -1180,13 +1341,82 @@ const tabVals = (tab) => {
   return v;
 };
 
-function afterMake(tab, res) {
+// ctx = { action, scope }: merkt sich die Aktion für "Neu würfeln" (#32).
+function afterMake(tab, res, ctx) {
   if (res == null) return;
   const out = typeof res === 'string' ? { text: res } : res;
   status(''); // alte Fehlermeldung nicht neben einem erfolgreichen Eintrag stehen lassen
+  const fxId = lastFx && lastFx.line === out.text ? lastFx.id : null;
+  if (ctx) lastAct = { action: ctx.action, scope: clone(ctx.scope), line: out.text, fxId, shift: out.shift || 0 };
   stage(out.text);
   if (out.shift) shiftTime(out.shift);
   tab.clear.forEach((id) => { tab.fields[id].value = ''; });
+  renderReroll();
+}
+
+/* ---------- Neu würfeln (#32) ---------- */
+function renderReroll() {
+  const b = $('reroll');
+  if (b) b.disabled = !lastAct;
+  const u = $('undoTurn');
+  if (u) u.disabled = !turns.length;
+}
+
+function reroll() {
+  const old = lastAct;
+  if (!old) return status(t('reroll.none'), false);
+  const e = old.fxId ? varLog.find((x) => x.id === old.fxId) : null;
+  const wasActive = !!e && e.state !== 'undone';
+  const prevState = e && e.state;
+  if (wasActive) { e.line = ''; if (!undoEntry(e)) { e.line = old.line; return; } e.line = old.line; }
+  const at = queue.indexOf(old.line);
+  const back = (m) => { $('time').value = hhmmOf((clockMinutes() - Math.ceil(m) + 14400) % 1440); };
+  if (old.shift) back(old.shift);
+  const res = runAction(old.action, clone(old.scope));
+  if (res == null) { // neue Aktion scheitert: alten Stand wiederherstellen
+    if (old.shift) $('time').value = hhmmOf((clockMinutes() + Math.ceil(old.shift)) % 1440);
+    if (wasActive) { e.prev = prevState; redoEntry(e); }
+    return;
+  }
+  const out = typeof res === 'string' ? { text: res } : res;
+  if (at >= 0) queue[Math.min(at, queue.length)] = out.text; else queue.push(out.text);
+  lastAct = { ...old, line: out.text, fxId: lastFx && lastFx.line === out.text ? lastFx.id : null, shift: out.shift || 0 };
+  renderQueue();
+  save();
+  if (out.shift) shiftTime(out.shift);
+  renderReroll();
+  status(t('reroll.done'));
+}
+
+/* ---------- Senden zurück (#17) ---------- */
+function undoTurn() {
+  const s = turns.shift();
+  if (!s) return status(t('turn.none'), false);
+  $('time').value = s.time;
+  queue = [...s.queue];
+  $('userText').value = s.userText || '';
+  vars = initVars(s.vars);
+  evDone = [...s.evDone];
+  evStart = s.evStart;
+  quests = MindWorld.questInit(profile.quests, s.quests);
+  curLoc = s.curLoc != null ? s.curLoc : curLoc;
+  varLog = clone(s.varLog);
+  history = history.filter((e) => e.at !== s.sentAt);
+  lastAct = null;
+  commitVars(); renderLog(); renderLocation(); renderEvents(); renderQueue(); renderHistory(); renderReroll();
+  save();
+  $('turnNote').hidden = false;
+  status(t('turn.done'));
+}
+
+// Korrekturzeile für das Mind (Text in der Sprache des Minds: profile.correction überschreibt die Vorgaben).
+function stageCorrection(kind) {
+  const c = profile.correction || {};
+  const base = kind === 'undo'
+    ? (c.undo || 'The previous message is withdrawn. Please ignore it and continue from the state below.')
+    : (c.text || 'Your status line does not match the real state. Please correct it and continue from the state below.');
+  const det = kind === 'guard' ? guardMismatch.map((m) => `${m.label}: ${m.panel}`).join(' · ') : '';
+  stageMany([line(wp(), [c.kind || 'CORRECTION'], [base, det].filter(Boolean).join(' '))]);
 }
 
 function renderBlock(tab, b) {
@@ -1218,7 +1448,7 @@ function renderBlockInner(tab, b) {
       const all = [...(b.items || []), ...dyn];
       all.forEach((it) => {
         const btn = h('button', null, typeof it === 'string' ? it : it.label);
-        btn.onclick = () => afterMake(tab, runAction(b.action, { item: it, field: tabVals(tab) }));
+        btn.onclick = () => { const sc = { item: it, field: tabVals(tab) }; afterMake(tab, runAction(b.action, sc), { action: b.action, scope: sc }); };
         if (it && it.when) { whenEls.push({ el: btn, cond: it.when }); mine.push(btn); }
         grid.appendChild(btn);
       });
@@ -1226,6 +1456,30 @@ function renderBlockInner(tab, b) {
     };
     build();
     if (b.itemsFrom) dynGrids.push(build);
+    el.appendChild(grid);
+  } else if (b.type === 'travel') {
+    el.appendChild(h('div', 'cap', b.cap || t('travel.cap')));
+    const grid = h('div', 'grid');
+    const build = () => {
+      grid.innerHTML = '';
+      const L = profile.locations;
+      const here = currentLoc();
+      const ex = here ? MindWorld.exits(L, here.id) : [];
+      ex.forEach((x) => {
+        const btn = h('button', null, x.label + (x.m ? ` · ${x.m}′` : ''));
+        btn.onclick = () => {
+          const sc = { item: { label: x.label, text: x.label, id: x.id, m: x.m }, from: here.label, field: tabVals(tab) };
+          const res = runAction(b.action, sc);
+          if (res == null) return;
+          afterMake(tab, res, { action: b.action, scope: sc });
+          setLocation(x.id);
+        };
+        grid.appendChild(btn);
+      });
+      if (!ex.length) grid.appendChild(h('p', 'hint', b.empty || t('travel.none')));
+    };
+    build();
+    dynGrids.push(build);
     el.appendChild(grid);
   } else if (b.type === 'compose') {
     renderCompose(tab, b);
@@ -1264,9 +1518,10 @@ function renderCompose(tab, b) {
   };
   sel.onchange = refresh;
   add.onclick = () => {
-    const res = runAction(b.action, { kind: sel.value, who: who.value.trim(), text: text.value.trim() });
+    const sc = { kind: sel.value, who: who.value.trim(), text: text.value.trim() };
+    const res = runAction(b.action, clone(sc));
     if (res == null) return;
-    afterMake({ fields: {}, clear: [] }, res);
+    afterMake({ fields: {}, clear: [] }, res, { action: b.action, scope: sc });
     text.value = '';
   };
   refresh();
@@ -1466,6 +1721,198 @@ function renderTabs() {
   setTab(profile.tabs[0].id);
 }
 
+/* ---------- Orte, Ambiente (#14, #16) ---------- */
+const currentLoc = () => {
+  const L = profile && profile.locations;
+  return L ? MindWorld.byId(L, curLoc) || MindWorld.byId(L, L.start) || null : null;
+};
+
+// Neuer Orts-Text in der Statuszeile: dann gilt er (das Mind hat dem Panel "geantwortet").
+function trackLocation(st) {
+  const L = profile && profile.locations;
+  if (!L) return;
+  const v = st && st[L.key || 'loc'];
+  if (typeof v === 'string' && v !== lastStatusLoc) {
+    lastStatusLoc = v;
+    const m = MindWorld.findLocation(L, v);
+    if (m) curLoc = m.id;
+  }
+}
+
+function setLocation(id) {
+  curLoc = id;
+  renderLocation();
+  refreshDynamic();
+  save();
+}
+
+function ambApply() {
+  const here = currentLoc();
+  const url = amb.on && here && here.audio;
+  const img = $('ambImg');
+  const wantImg = amb.on && here && here.image;
+  img.hidden = !wantImg;
+  if (wantImg && img.getAttribute('src') !== here.image) img.src = here.image;
+  if (!url) { if (ambAudio) ambAudio.pause(); return; }
+  if (!ambAudio) { ambAudio = new Audio(); ambAudio.loop = true; }
+  if (ambUrl !== url) { ambAudio.src = url; ambUrl = url; }
+  ambAudio.volume = Math.min(1, Math.max(0, amb.vol / 100));
+  ambAudio.muted = !!amb.mute;
+  const p = ambAudio.play();
+  if (p && p.catch) p.catch(() => { /* Browser verlangt erst einen Klick */ });
+}
+
+function renderLocation() {
+  const L = profile && profile.locations;
+  $('worldBox').hidden = !L;
+  if (!L) {
+    if (ambAudio) ambAudio.pause();
+    if (profile && locThemeSig !== 'none:' + profile.id && !previewing) { locThemeSig = 'none:' + profile.id; chrome.storage.local.set({ [key('locTheme')]: null }); }
+    return;
+  }
+  const here = currentLoc();
+  $('locName').textContent = here ? `📍 ${here.label}` : '📍 ?';
+  $('locHint').textContent = (here && here.hint) || '';
+  $('ambRow').hidden = !L.items.some((i) => i.audio || i.image);
+  $('ambOn').checked = amb.on;
+  $('ambMute').textContent = amb.mute ? '🔇' : '🔊';
+  $('ambVol').value = amb.vol;
+  // Farben des Ortes: im Panel und (über chrome.storage) im Chat der Venice-Seite
+  const th = here && here.theme ? here.theme : null;
+  applyTheme({ ...profile.theme, ...(th || {}) });
+  const sig = JSON.stringify([profile.id, th]);
+  if (sig !== locThemeSig && !previewing) { locThemeSig = sig; chrome.storage.local.set({ [key('locTheme')]: th }); }
+  ambApply();
+}
+
+async function initAmbience() {
+  const { ambience } = await chrome.storage.local.get('ambience');
+  amb = { on: false, mute: false, vol: 50, ...(ambience || {}) }; amb.on = false; // an ist nie voreingestellt
+  const keep = () => { chrome.storage.local.set({ ambience: { mute: amb.mute, vol: amb.vol } }); ambApply(); };
+  $('ambOn').onchange = () => { amb.on = $('ambOn').checked; ambApply(); };
+  $('ambMute').onclick = () => { amb.mute = !amb.mute; $('ambMute').textContent = amb.mute ? '🔇' : '🔊'; keep(); };
+  $('ambVol').oninput = () => { amb.vol = parseInt($('ambVol').value, 10) || 0; keep(); };
+}
+
+/* ---------- Auswahl aus der Antwort (#15) und Änderungsvorschläge (#31) ---------- */
+function renderChoices(list) {
+  const box = $('choicesBox');
+  const grid = $('choicesList');
+  grid.innerHTML = '';
+  box.hidden = !list.length;
+  if (!list.length) return;
+  $('choicesCap').textContent = (profile.choices && profile.choices.cap) || t('choices.cap');
+  list.forEach((c) => {
+    const b = h('button', null, c.label.length > 70 ? c.label.slice(0, 70) + '…' : c.label);
+    b.title = c.label;
+    b.onclick = () => {
+      const sc = { item: c, field: {}, n: c.n };
+      afterMake({ fields: {}, clear: [] }, runAction(profile.choices.action, sc), { action: profile.choices.action, scope: sc });
+      renderChoices([]);
+    };
+    grid.appendChild(b);
+  });
+}
+
+const effectText = (rule, scope) => {
+  const f = (v) => MindProfiles.fill(String(v), scope).text.trim();
+  const out = [];
+  Object.entries(rule.set || {}).forEach(([k, v]) => out.push(`${varLabel(k)} = ${f(v)}`));
+  Object.entries(rule.add || {}).forEach(([k, v]) => { const x = f(v); out.push(`${varLabel(k)} ${/^[-+]/.test(x) ? x : '+' + x}`); });
+  Object.entries(rule.push || {}).forEach(([k, v]) => out.push(`${varLabel(k)} +${f(v)}`));
+  Object.entries(rule.remove || {}).forEach(([k, v]) => out.push(`${varLabel(k)} −${f(v)}`));
+  Object.entries(rule.quest || {}).forEach(([id, v]) => out.push(`${questLabel(id)} → ${f(v)}`));
+  return out.join(' · ');
+};
+
+function renderSuggest() {
+  const ul = $('suggestList');
+  ul.innerHTML = '';
+  const shown = suggested.filter((x) => !x.done);
+  $('suggestBox').hidden = !shown.length;
+  shown.forEach((sg) => {
+    const scope = { ...sg.groups, match: sg.match };
+    const text = effectText(sg.rule, scope);
+    const li = h('li');
+    li.append(h('span', null, (sg.rule.label ? MindProfiles.fill(sg.rule.label, scope).text + ' · ' : '') + text));
+    const ok = h('button', null, t('suggest.apply'));
+    ok.onclick = () => {
+      if (!applyEffects(sg.rule, scope, t('suggest.log', { text }))) return;
+      if (lastFx) lastFx.state = 'sent'; // nicht an eine Zeile in der Warteschlange gebunden
+      sg.done = true;
+      renderLog();
+      renderSuggest();
+      status(t('suggest.applied', { text }));
+    };
+    const no = h('button', null, t('suggest.skip'));
+    no.title = t('suggest.skipTitle');
+    no.onclick = () => { sg.done = true; renderSuggest(); };
+    li.append(ok, no);
+    ul.appendChild(li);
+  });
+}
+
+// Liest die letzte Antwort mit; Optionen und Vorschläge erscheinen, sobald sie sich nicht mehr ändert.
+async function replyWatch() {
+  if (!profile || editing || previewing || !(profile.choices || (profile.suggest && profile.suggest.length))) return;
+  const tab = await findVeniceTab();
+  if (!tab) return;
+  const res = await readReply(tab);
+  if (!res || !res.ok) return;
+  const text = cleanReply(res.text);
+  if (!text) return;
+  const sig = replyPrint({ count: res.count, text });
+  if (sig !== replySeen) { replySeen = sig; return; }
+  if (replyDone === sig) return;
+  replyDone = sig;
+  renderChoices(profile.choices ? MindWorld.parseChoices(text, profile.choices) : []);
+  suggested = profile.suggest ? MindWorld.suggestions(profile.suggest, text) : [];
+  renderSuggest();
+}
+
+/* ---------- State-Guard (#30) ---------- */
+function renderGuard() {
+  const ul = $('guardList');
+  ul.innerHTML = '';
+  const sig = JSON.stringify(guardMismatch);
+  $('guardBox').hidden = !guardMismatch.length || sig === guardHidden;
+  guardMismatch.forEach((m) => ul.appendChild(h('li', null, t('guard.row', m))));
+}
+
+function checkGuard() {
+  if (!profile || !profile.guard) return;
+  guardMismatch = MindWorld.guardCheck(profile.guard, lastState, vars, profile.variables, profile.locations, curLoc);
+  renderGuard();
+}
+
+/* ---------- Quests (#33) ---------- */
+function setQuest(id, to) {
+  const from = quests[id];
+  if (from === to) return;
+  quests[id] = to;
+  const e = addLog([{ kind: 'quest', id, from, to }], t('quest.summary'));
+  e.state = 'sent';
+  commitVars();
+  renderLog();
+}
+
+function renderQuests() {
+  const ul = $('questList');
+  const list = (profile && profile.quests) || [];
+  $('questBox').hidden = !list.length;
+  ul.innerHTML = '';
+  list.forEach((q) => {
+    const li = h('li', quests[q.id]);
+    const label = h('span', null, q.label + (q.text ? ' – ' + q.text : ''));
+    const sel = h('select');
+    MindWorld.QUEST_STATES.forEach((st) => { const o = h('option', null, t('quest.state.' + st)); o.value = st; sel.appendChild(o); });
+    sel.value = quests[q.id];
+    sel.onchange = () => setQuest(q.id, sel.value);
+    li.append(label, sel);
+    ul.appendChild(li);
+  });
+}
+
 /* ---------- Chat-Darstellung & Spielzustand ---------- */
 const THEME_DEFAULT = { theme: true, scan: true, screens: true, events: true, sync: true };
 const THEME_IDS = { theme: 'thTheme', scan: 'thScan', screens: 'thScreens', events: 'thEvents', sync: 'thSync' };
@@ -1480,7 +1927,9 @@ function saveTheme() {
 function renderHud(st) {
   const hud = $('hud');
   lastState = st || null;
+  trackLocation(st);
   refreshDynamic();
+  renderLocation();
   $('statusRight').textContent = profile.statusRight ? MindProfiles.fill(profile.statusRight, { ...(st || {}), ...vars }).text : '';
   const vk = Object.keys(profile.variables || {});
   const vtext = vk.map((k) => `${profile.variables[k].icon ? profile.variables[k].icon + ' ' : ''}${varLabel(k)} ${varShow(k)}`).join(' · ');
@@ -1501,6 +1950,7 @@ function renderHud(st) {
 
 function applyState(st) {
   renderHud(st);
+  checkGuard();
   if (!$('thSync').checked || !st) return;
   if (st.time) { const before = clockMinutes(); $('time').value = st.time; fireEvents(before, clockMinutes()); }
   renderPreview();
@@ -1520,6 +1970,8 @@ async function applyProfile(p) {
   renderHeader();
   renderTabs();
   await loadProfileData();
+  locThemeSig = '';
+  renderLocation();
   renderQueue();
   renderHistory();
   const clockOn = p.clock !== false;
@@ -1600,7 +2052,12 @@ function initStatic() {
   $('sendState').addEventListener('change', renderPreview);
   Object.values(THEME_IDS).forEach((id) => $(id).addEventListener('change', saveTheme));
   $('send').onclick = send;
-  $('clearQueue').onclick = () => { queue = []; $('userText').value = ''; renderQueue(); save(); status(''); };
+  $('reroll').onclick = reroll;
+  $('undoTurn').onclick = undoTurn;
+  $('turnFix').onclick = () => { stageCorrection('undo'); $('turnNote').hidden = true; };
+  $('guardFix').onclick = () => { stageCorrection('guard'); guardHidden = JSON.stringify(guardMismatch); renderGuard(); status(t('guard.queued')); };
+  $('guardHide').onclick = () => { guardHidden = JSON.stringify(guardMismatch); renderGuard(); };
+  $('clearQueue').onclick = () => { revertQueued(queue); queue = []; $('userText').value = ''; renderQueue(); save(); status(''); };
   $('convention').onclick = () =>
     inject(MindProfiles.fill(profile.convention, { hp: hp(), wp: wp() }).text, { send: false, append: $('append').checked });
   $('unassign').onclick = async () => {
@@ -2101,10 +2558,12 @@ function initLang() {
   initSpeech();
   initZoom();
   initFullpage();
+  initAmbience();
   initProfileManager();
   initEditor();
   initAssist();
   await refreshMind();
   if (TAB_MODE) { renderChat(); setInterval(renderChat, 1500); }
   setInterval(refreshMind, 3000); // Fängt Seitenwechsel in der Single-Page-App ab
+  setInterval(replyWatch, 3000);
 })();

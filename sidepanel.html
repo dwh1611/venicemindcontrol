@@ -126,6 +126,35 @@
 
       <div class="hud" id="hud" hidden></div>
 
+      <section class="world" id="worldBox" hidden>
+        <div class="locline"><b id="locName"></b><span class="hint" id="locHint"></span></div>
+        <img id="ambImg" alt="" hidden />
+        <div class="row ambrow" id="ambRow" hidden>
+          <label class="inline"><input type="checkbox" id="ambOn" /> <span data-i18n="amb.on">ambience</span></label>
+          <button id="ambMute" data-i18n-title="amb.mute" title="Mute">🔊</button>
+          <input id="ambVol" type="range" min="0" max="100" value="50" data-i18n-aria="amb.vol" aria-label="Volume" />
+        </div>
+      </section>
+
+      <section class="notice warn" id="guardBox" hidden>
+        <div class="cap" data-i18n="guard.cap">STATE CHECK</div>
+        <ul id="guardList"></ul>
+        <div class="row">
+          <button id="guardFix" class="primary" data-i18n="guard.fix">SEND CORRECTION</button>
+          <button id="guardHide" data-i18n="guard.hide">IGNORE</button>
+        </div>
+      </section>
+
+      <section class="notice" id="choicesBox" hidden>
+        <div class="cap" id="choicesCap" data-i18n="choices.cap">CHOICES</div>
+        <div class="grid" id="choicesList"></div>
+      </section>
+
+      <section class="notice" id="suggestBox" hidden>
+        <div class="cap" data-i18n="suggest.cap">SUGGESTED CHANGES</div>
+        <ul id="suggestList"></ul>
+      </section>
+
       <section class="favs" id="favsBox" hidden>
         <div class="cap"><span data-i18n="favs.cap">FAVORITES</span> <span class="hintinline" data-i18n="favs.hint">(click = queue all lines)</span></div>
         <div class="grid" id="favs"></div>
@@ -146,6 +175,14 @@
           <button id="clearQueue" data-i18n="clear.btn">CLEAR</button>
         </div>
         <div class="row">
+          <button id="reroll" data-i18n="reroll.btn" data-i18n-title="reroll.title" disabled>↻ REROLL</button>
+          <button id="undoTurn" data-i18n="turn.btn" data-i18n-title="turn.title" disabled>↶ UNDO SEND</button>
+        </div>
+        <div class="notice" id="turnNote" hidden>
+          <span data-i18n="turn.note">Panel restored to before the last send. Text that was already sent stays in the Venice chat.</span>
+          <button id="turnFix" data-i18n="turn.fix">INSERT CORRECTION LINE</button>
+        </div>
+        <div class="row">
           <input id="macroName" data-i18n-ph="macro.placeholder" placeholder="Favorite name" maxlength="24" />
           <button id="macroSave" data-i18n="macro.save">★ SAVE QUEUE</button>
         </div>
@@ -158,6 +195,16 @@
         <div id="varsList"></div>
         <label class="inline"><input type="checkbox" id="sendState" checked /> <span data-i18n="vars.send">add the state line to every message</span></label>
         <button id="varsReset" data-i18n="vars.reset">RESET TO START VALUES</button>
+        <details class="sub" id="logBox">
+          <summary data-i18n="log.summary">CHANGE LOG</summary>
+          <p class="hint" data-i18n="log.hint">Every change an action made. UNDO reverts one entry (removing a queued line does it automatically).</p>
+          <ul id="logList"></ul>
+        </details>
+      </details>
+
+      <details class="settings" id="questBox" hidden>
+        <summary data-i18n="quest.summary">QUESTS</summary>
+        <ul id="questList"></ul>
       </details>
 
       <details class="settings" id="eventsBox" hidden>
@@ -276,6 +323,7 @@
   <script src="profiles/ghostline.js"></script>
   <script src="speech.js"></script>
   <script src="assistant.js"></script>
+  <script src="world.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
