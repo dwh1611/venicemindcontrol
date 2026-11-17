@@ -231,4 +231,4 @@ Profile/                      your own profiles (local, not versioned)
 ![Unknown Mind](docs/screenshots/unknown-mind.png) ![Slash](docs/screenshots/custom-commands.png)
 
 ## License & privacy
-MIT – see [LICENSE](LICENSE). No data collection: [PRIVACY.md](PRIVACY.md). Chrome Web Store texts and permission justifications: [STORE-LISTING.md](STORE-LISTING.md). Build the upload package with `./build.sh`.
+[PolyForm Noncommercial 1.0.0](LICENSE): free for personal, hobby, research and other noncommercial use; commercial use is not permitted. (Versions up to 1.4.0 were released under the MIT license and stay available under it.) No data collection: [PRIVACY.md](PRIVACY.md). Chrome Web Store texts and permission justifications: [STORE-LISTING.md](STORE-LISTING.md). Build the upload package with `./build.sh`.
