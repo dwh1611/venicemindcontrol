@@ -186,6 +186,10 @@ button[data-key]::after { content: attr(data-key); margin-left: 4px; font-size: 
 #slotBox .row input, #macroName, #slotName { flex: 2; min-width: 0; }
 
 .editor { border: 1px solid var(--warn); background: var(--bg2); padding: 8px; display: flex; flex-direction: column; gap: 7px; }
+.fld { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--mut); flex: 1; min-width: 0; }
+.fld input, .fld textarea { width: 100%; box-sizing: border-box; }
+.assistnote { border: 1px solid var(--warn); background: var(--deep); color: var(--warn); padding: 6px 8px; font-size: 12px; line-height: 1.4; }
+.assistnote b { color: var(--fg); }
 #edText { width: 100%; font-size: 11px; line-height: 1.4; white-space: pre; overflow: auto; tab-size: 2; }
 #edErrors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 #edErrors li { border-left: 2px solid var(--err); background: var(--deep); padding: 3px 6px; font-size: 11px; color: var(--err); word-break: break-word; }

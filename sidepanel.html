@@ -55,6 +55,7 @@
         <button id="ptemplate" data-i18n="profiles.template">TEMPLATE</button>
       </div>
       <div class="row">
+        <button id="passist" class="primary" data-i18n="assist.open" data-i18n-title="assist.openTitle">PROFILE ASSISTANT</button>
         <button id="pnew" data-i18n="profiles.new">NEW PROFILE (EDITOR)</button>
       </div>
       <div class="row">
@@ -66,8 +67,32 @@
       <p class="hint" data-i18n="profiles.hint">Custom profiles are plain data (JSON) and never run code. Format and guide: PROFILE-FORMAT.md, AUTHOR-GUIDE.md (also in German).</p>
     </details>
 
+    <section class="editor" id="assist" hidden>
+      <div class="cap" data-i18n="assist.title">PROFILE ASSISTANT</div>
+      <p class="hint" data-i18n="assist.hint">Describe your Mind. The assistant writes the task into the Venice chat, waits for the Mind to produce the profile JSON and opens the editor with the result. Best used in a new, empty chat of the Mind.</p>
+      <div class="status" id="asMind"></div>
+      <label class="fld"><span data-i18n="assist.name">Name of the Mind</span><input id="asName" /></label>
+      <div class="row">
+        <label class="fld"><span data-i18n="assist.mindLang">Language of the Mind</span><input id="asMindLang" /></label>
+        <label class="fld"><span data-i18n="assist.panelLang">Language of the panel</span><input id="asPanelLang" /></label>
+      </div>
+      <label class="fld"><span data-i18n="assist.about">What is it about? (role, character, mood, world)</span><textarea id="asAbout" rows="3"></textarea></label>
+      <label class="fld"><span data-i18n="assist.actions">What can you do? (becomes buttons)</span><textarea id="asActions" rows="3"></textarea></label>
+      <label class="fld"><span data-i18n="assist.events">Which events come from outside?</span><textarea id="asEvents" rows="2"></textarea></label>
+      <label class="fld"><span data-i18n="assist.status">Values in the status line (place, money, risk …)</span><input id="asValues" /></label>
+      <label class="fld"><span data-i18n="assist.look">Desired look (colours, style)</span><input id="asLook" /></label>
+      <label class="fld"><span data-i18n="assist.scen">Scenarios wanted? (yes/no, which)</span><input id="asScen" /></label>
+      <div class="status" id="asState"></div>
+      <div class="row">
+        <button id="asStart" class="primary" data-i18n="assist.start">SEND TO MIND</button>
+        <button id="asNow" data-i18n="assist.now" hidden>OPEN EDITOR NOW</button>
+        <button id="asClose" data-i18n="assist.close">CLOSE</button>
+      </div>
+    </section>
+
     <section class="editor" id="editor" hidden>
       <div class="cap" id="edTitle">PROFILE EDITOR</div>
+      <div class="assistnote" id="edAssist" hidden></div>
       <p class="hint" data-i18n="editor.hint">Edit the JSON. Errors show up while you type. PREVIEW shows the profile in the panel without saving.</p>
       <textarea id="edText" rows="22" spellcheck="false" wrap="off"></textarea>
       <div class="status" id="edStatus"></div>
@@ -250,6 +275,7 @@
   <script src="profiles/nightingale.js"></script>
   <script src="profiles/ghostline.js"></script>
   <script src="speech.js"></script>
+  <script src="assistant.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
